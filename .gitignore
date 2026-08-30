@@ -1,0 +1,5 @@
+*.asv
+*~
+*conflicted copy*
+*backup*
+data/sample/*.mat
