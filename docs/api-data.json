@@ -1,0 +1,1131 @@
+{
+  "class": {
+    "name": "CLASS_photometry_roadmapv1_4",
+    "properties": [
+      {
+        "name": "Plot",
+        "description": "Keeps track of plotting parameters, including lick times/positions"
+      },
+      {
+        "name": "iv",
+        "description": "Holds on to init variables... or some of them"
+      },
+      {
+        "name": "Mode",
+        "description": ""
+      },
+      {
+        "name": "BinParams",
+        "description": ""
+      },
+      {
+        "name": "BinnedData",
+        "description": ""
+      },
+      {
+        "name": "SaveMode",
+        "description": ""
+      },
+      {
+        "name": "Log",
+        "description": ""
+      },
+      {
+        "name": "Stat",
+        "description": ""
+      },
+      {
+        "name": "Stim",
+        "description": ""
+      },
+      {
+        "name": "ChR2",
+        "description": ""
+      },
+      {
+        "name": "gFitLP",
+        "description": ""
+      },
+      {
+        "name": "GLM",
+        "description": ""
+      },
+      {
+        "name": "ts",
+        "description": ""
+      },
+      {
+        "name": "CtrlCh",
+        "description": ""
+      },
+      {
+        "name": "video",
+        "description": ""
+      }
+    ],
+    "methods": [
+      {
+        "name": "fix_photometry_in_halfway_ex4",
+        "signature": "fix_photometry_in_halfway_ex4(kill_s_window, gfitog)",
+        "description": ""
+      },
+      {
+        "name": "alignFluopulse",
+        "signature": "alignFluopulse()",
+        "description": ""
+      },
+      {
+        "name": "addFluopulseData",
+        "signature": "addFluopulseData()",
+        "description": "let's collect the doric file from folder"
+      },
+      {
+        "name": "getIntervals",
+        "signature": "getIntervals(Overwrite, SkipBlockIDs)",
+        "description": ""
+      },
+      {
+        "name": "setLongITIobj",
+        "signature": "setLongITIobj(duration_s)",
+        "description": ""
+      },
+      {
+        "name": "blockDurationParser",
+        "signature": "blockDurationParser()",
+        "description": "converts the legend into actual time windows and makes plotting stuff standaloneversion made from zztobj for use with sobj"
+      },
+      {
+        "name": "getCIonBinnedPhotometryTrace",
+        "signature": "getCIonBinnedPhotometryTrace(binEdges, Method, binnedobj)",
+        "description": "for obj: Should use Mode singletrial-downsample on either single session or cross session obj to get the CI here...       obj = CLASS_photometry_roadmapv1_4('v3x','singletrial-downsample',1,{'multibaseline',10},30000,[],[], 'off')\n  the binnedobj should be pooled, custom or outcome pooling\n      seems ok\n          obj = CLASS_photometry_roadmapv1_4('v3x','custom',[0,500,501,3333,3334,7000,7001,14000,14001,17000],{'multibaseline',10},30000,[],[], 'off')\n\n   this is meant to be run on 2 bins at a time\n  then should call: getCIonBinnedPhotometryTrace(obj,\n      getCIonBinnedPhotometryTrace(obj, [0,3.333,7], 'CI95', binnedObj); % used in the paper\n\n      getCIonBinnedPhotometryTrace(obj,[0,0.5,3.333], 'CI95', obj_ex4); %gives early and rxn ci\n      getCIonBinnedPhotometryTrace(obj,[3.333,7,14], 'CI95', obj_ex4); %gives rew and late\n      getCIonBinnedPhotometryTrace(obj,[7,14,17], 'CI95',obj_ex4); %gives late and iti\n\n \t\tWe will find all the trials with a lick time within a certain range\nbinEdges(ibin) is in SECONDS\n\nWILL STORE IN CtrlCh!"
+      },
+      {
+        "name": "getStimCalibration",
+        "signature": "getStimCalibration(powerLadder, smoothing, trimRewDeets)",
+        "description": ""
+      },
+      {
+        "name": "rando_juice_extraction",
+        "signature": "rando_juice_extraction(manual, suppresFigures)",
+        "description": ""
+      },
+      {
+        "name": "extractRewardedTrials",
+        "signature": "extractRewardedTrials(revise)",
+        "description": ""
+      },
+      {
+        "name": "fixinhibitionfit_sloshing",
+        "signature": "fixinhibitionfit_sloshing()",
+        "description": "fixes interpolation for wide window gtacr2 artifact in sloshing experiment. then resaves file\nploys code to fix chop of chr2 in inhibition experiment"
+      },
+      {
+        "name": "IRTbyOpportunity",
+        "signature": "IRTbyOpportunity(binWidth, truncate)",
+        "description": "From Jaldow and Oakley 1990 -- \"Interresponse time distribution. A low number of reinforcements obtained per session does not necessarily indicate that an animal has \nnot learned anything about the temporal requirements of the schedule."
+      },
+      {
+        "name": "partitionCLTA",
+        "signature": "partitionCLTA(nPartitions)",
+        "description": ""
+      },
+      {
+        "name": "TOF_LTApeakAmp",
+        "signature": "TOF_LTApeakAmp(Debug)",
+        "description": "We will align gfit to LTA on single trials   \tThen, we will find the first spike back from the flick\n  \tWe will measure the peak amplitude and the distance in time and record both into the ts field"
+      },
+      {
+        "name": "RIMSummary",
+        "signature": "RIMSummary(Mouse, Day, Style, plotTitles, rxnBoundary, trialRange)",
+        "description": "rxnBoundary = a time in seconds (between 0 to 1, ideally) that we want to exclude all licks before because we don't\nwant to include the reaction peak.\n\ntrialRange = vector of trials to include (indicies for our\ntrials)\n            [1:400] = [1,2,3,4,....,400]"
+      },
+      {
+        "name": "getBinnedLicksMARY",
+        "signature": "getBinnedLicksMARY(ref, s_b4, s_post, rxnwin_s, Mode)",
+        "description": ""
+      },
+      {
+        "name": "plotBinnedHistogramMARY",
+        "signature": "plotBinnedHistogramMARY(Mode, ref, rxnwin_s, lick_number)",
+        "description": "Mode: \t'hxg' \t\t\t= normalized histogram   \t\t\t'hxg-counts' \t= absolute numbers of first licks\n  \t\t\t'ecdf'\t\t\t= ecdf of first\n  \t\t\t'raster'\t\t= plots a raster\n \t\t\t'qq'\t\t\t= QQ-Plot of Inverse_Gaussian VS Exponential\n\n  \tref: \t'cue'\t\t\t= cue reference event (standard)\n  \t\t\t'lick' \t\t\t\n  \t\t\t'lampOff'\n\n  \trxnwin_s \t\t\t\t= 0.5 for hyb500, op500\n  \t\t\t\t\t\t\t= 0 for op0\n  \t\t\tAny licks within rxnwin_s of reference event will not be scored as \"first\""
+      },
+      {
+        "name": "convertSingleTrialTSIdxToAllTrialsIdx",
+        "signature": "convertSingleTrialTSIdxToAllTrialsIdx()",
+        "description": ""
+      },
+      {
+        "name": "singleTrialOutliers",
+        "signature": "singleTrialOutliers(lickTimeRange, redoExclusions, stdmultiplier, outlierTimeRange, suppressNsave)",
+        "description": "Redoes exclusions based on outlier criteria within a timewindow wrt cue   \t\tlicktTimeRange: s - lick times we want to consider for elimination\n  \t\tredoExclusions: if true, will keep the changes to the exclusions in the updated object\n  \t\tstdmultiplier: looks for values as extreme as this * the std of the min or max of the gfit in the window\n  \t\toutlierTimeRange: s - window of time wrtc that we are looking for outliers in unsmoothed gfit signal\n  \t\tsuppressNsave: folder where figure should be saved\n  \tSee documentation in ~/Lab Notebook (ppt)/2020 Feb 6 Cleaning Up GrabDA4.4\n\n  \tNB: stores the original exclusions if it changes them, and these can be easily reversed, see RESET section below"
+      },
+      {
+        "name": "singleTrialFigures",
+        "signature": "singleTrialFigures(lickTimeRange, smoothing, suppressNsave)",
+        "description": ""
+      },
+      {
+        "name": "fixCollated_ts_field",
+        "signature": "fixCollated_ts_field(original_ts_field)",
+        "description": ""
+      },
+      {
+        "name": "rebinCollated",
+        "signature": "rebinCollated(binsToMix, partnerObj)",
+        "description": ""
+      },
+      {
+        "name": "correctPathOS",
+        "signature": "correctPathOS(pathstr)",
+        "description": ""
+      },
+      {
+        "name": "printFigure",
+        "signature": "printFigure(name, f)",
+        "description": ""
+      },
+      {
+        "name": "suppressNsaveFigure",
+        "signature": "suppressNsaveFigure(Folder, FigureName, f)",
+        "description": "Input the directory to save to   \tFigure name will go between:\n  \t\tFigureName_Mousename_signal_day_timestamp.fig"
+      },
+      {
+        "name": "findTrialByItsLickTime",
+        "signature": "findTrialByItsLickTime(lickTime_s, Sorted)",
+        "description": "To plot the single trial figure for B5 day 13: obj.plot('CTA2l', obj.findTrialByItsLickTime([3.609,1.495,5.853,4.232,5.853],true), false, 100, 'last-to-first', 1)"
+      },
+      {
+        "name": "getflickswrtj",
+        "signature": "getflickswrtj(overwrite)",
+        "description": ""
+      },
+      {
+        "name": "getflickswrtc",
+        "signature": "getflickswrtc(overwrite)",
+        "description": ""
+      },
+      {
+        "name": "cue2lickAUC",
+        "signature": "cue2lickAUC(Mode, smoothing, lickbuffer_s, tsID)",
+        "description": "Gets the binned timeseries for the gfit, then gets the AUC for the cue to lick period \n  \tMode: \n  \t\t'totalAUC' -- just sums the y-shifted signal to get AUC\n  \t\t'%AUC' \t   -- gets AUC at % intervals\n  \t\t'%AUC-rate' -- gets AUC at % intervals, returns measurement of how quickly AUC is increasing\n  \t\t'%AUC-CDF' -- gets AUC at % intervals then puts them together like a CDF"
+      },
+      {
+        "name": "testInterpolation",
+        "signature": "testInterpolation(Mode, trialNum, excludetime)",
+        "description": "TEST CODE for interpolateForPCA - verified works on 1/6/20 -- see \"PCA in lieu of horizontal threshold\" ppt \n  \tTakes the gfit data and cuts out the cue-up-to-lick interval. Then, it expands it via interpolation to be 7s long"
+      },
+      {
+        "name": "interpolateForPCA",
+        "signature": "interpolateForPCA(overwrite, Mode, trialNum, excludetime, enforcedlatency, presmooth, minValidTime, Signal)",
+        "description": "excludetime = time in s from the cue   \tenforcedlatency = time in s from the lick\n  \tpresmooth is the ms gausssmooth kernel for gfit BEFORE fitting pca - use 0 for raw gfit into PCA\n  \tminValidTime = time in s required in the period considered for interpolation -- default = 0.1s"
+      },
+      {
+        "name": "binPCAfit",
+        "signature": "binPCAfit(binMode, nbins, pcs)",
+        "description": "binMode:\t'times' \t-- nbins is the number of bins of equally-spaced time   \t\t\t\t'trials' \t-- nbins is the number of trials per bin, WITH LEFT HAND SIDE UNEVEN BECAUSE OF 700-1000 small range!\n  \t\t\t\t\t\t\t\t** different from getBinnedTimeseries\n  \t\t\t\t'trialslegacy' -- nbins is the number of trials per bin, matching the original methods of getBinnedTimeseries\n  \t\t\t\t'singletrial' -- just keeps the known PC fits"
+      },
+      {
+        "name": "plotPCA",
+        "signature": "plotPCA(Mode, trial, pcs, insetAx, suppressNsave)",
+        "description": ""
+      },
+      {
+        "name": "horizontalThresholdPCA",
+        "signature": "horizontalThresholdPCA(Mode, nthresh, direction, Plot, pcs, smoothing_samples, presmoothPCA, verbose, signal, stiffWindow)",
+        "description": "smoothing_samples is the smoothing OF the PCAs after fitting before threshold model \tpresmoothPCA is the smoothing of the gfit BEFORE fitting the PCAs\n\n\tUsing our best PCA params to clean up the data, we will take the first 3 PCs of the dataset and use these to reconstruct the trials\n\tand then we will apply the horizontal threshold crossing to it\n\n\tGet the cleaned up dataset using PCA\n\nobj.Stat.ht = {};"
+      },
+      {
+        "name": "modelDatasetWithPCA",
+        "signature": "modelDatasetWithPCA(pcs)",
+        "description": ""
+      },
+      {
+        "name": "dxMeanSlope",
+        "signature": "dxMeanSlope(suppressNsave)",
+        "description": "Plots Hxg and slope vs lick time \n  \tsuppressNsave: if not empty, saves the figure to the folder at this address and then closes figure"
+      },
+      {
+        "name": "PCAmeanSlope",
+        "signature": "PCAmeanSlope(pcs, Plot, suppressNsave, slopeSpacing_ndivs)",
+        "description": "error('This was edited and may have errors, need to clean it up') \n  \tGathers PCAs with default params for buffers on cue and lick time, no smoothing, then calculates the mean derivative of each trial's PCA\n\n  \tsuppressNsave: if not empty, saves the figure to the folder at this address and then closes figure"
+      },
+      {
+        "name": "PCAbinnedSlope",
+        "signature": "PCAbinnedSlope(Mode, pcs, ndivs, verbose)",
+        "description": ""
+      },
+      {
+        "name": "extractSlope",
+        "signature": "extractSlope(mintime_s, latencybuffer_s, measurementWindow1_2, n)",
+        "description": ""
+      },
+      {
+        "name": "GLM_predictLickTime_AlignSingleTrials2Timestamp",
+        "signature": "GLM_predictLickTime_AlignSingleTrials2Timestamp(ts, stamps, nSamples, stampsMultiplier, smoothing)",
+        "description": "Here we can take any timeseries, ts, and align it to any timestamp (stamps = in samples)   \t\tWe return EACH stamp's aligned data with number \n  \t\tof samples on EITHER side of event = nSamples"
+      },
+      {
+        "name": "GLM_predictLickTime_buildX",
+        "signature": "GLM_predictLickTime_buildX(predictor, trials_in_range_first, n, f_lick_s, Debug)",
+        "description": ""
+      },
+      {
+        "name": "GLM_predictLickTime",
+        "signature": "GLM_predictLickTime(Mode, Conditioning, Link, Debug, predictorSet, verbose, killMissing)",
+        "description": "y = movement time in s wrt cue on trial n   \tx = {predictorSet}\n\n  \ty = inverseGaussian(th*x)\n\n  \tConditioning: \n  \t\tConsecutive-In-Range: two consecutive trials with licks in range of the trial time (e.g. early or reward)\n  \t\t'Nth-In-Range,N-1Relaxed: N: rxn time 0.7s, minValidTime 0.1s, buffer to lick 0.6s, <7s, N-1: nolick -> 17'\n  \t\t'Relaxed: N: rxn time 0.7s, minValidTime 0.1s, buffer to lick 0.6s,up to 17s, N-1: nolick -> 17'\n  \t\t'Complete Relax: N, N-1: nolick -> 17, all others considered'"
+      },
+      {
+        "name": "getPredictorSet",
+        "signature": "getPredictorSet(keyword)",
+        "description": "keyword: \t \t\t\t\t'pretrial'\n\t\t\t\t'pretrial_1htstiff' %%% NB: removed the no-lick term because it's implicit. 5 categories, thus use 4 variables\n\t\t\t\t'pretrial_tdtht_1htstiff'\n\t\t\t\t'pretrial_tdtht_PC1_3_1htstiff'\n\t\t\t\t'pretrial_1htstiff_slope'\n \t\t\t\t'PCAbinnedSlope' \n\t\t\t\t'pretrial_tdtht_PCAbinnedSlope'\n\t\t\t\t'ht'\n\t\t\t\t'ht-stiff'\n\t\t\t\t'ht-stiff-PC1-3'\n\t\t\t\t'ht-tdt'\n\t\t\t\t'ht-tdtgfit'\n\t\t\t\t'ht-trial#^2'\n\t\t\t\t'htPCA'\n\t\t\t\t'PC1-3'\n\t\t\t\t'PC1-3htPCA'\n\t\t\t\t'mislope'\n\t\t\t\t'PC1-3htPCAmislope'\n\t\t\t\t'htPCA-stiff'\n\npredictorSet = {{'prior first lick',1}, {'baseline ave wrt LO', 9, 1000}, {'ave lights off to cue', 1}, {'mean cue-500ms', 1}};"
+      },
+      {
+        "name": "plotHTresultVsLickTime_decodingHelper",
+        "signature": "plotHTresultVsLickTime_decodingHelper(X, y, Title, subplotvector)",
+        "description": ""
+      },
+      {
+        "name": "plotHTresultVsLickTime_decoding",
+        "signature": "plotHTresultVsLickTime_decoding()",
+        "description": ""
+      },
+      {
+        "name": "plotPredictorVsLickTime_decoding",
+        "signature": "plotPredictorVsLickTime_decoding(predictorNum, reverse)",
+        "description": ""
+      },
+      {
+        "name": "plotBetaNestProgression_decoding",
+        "signature": "plotBetaNestProgression_decoding(predictorNum)",
+        "description": "We will plot how adding each subsequent term affects beta"
+      },
+      {
+        "name": "Nested_GLM_predictLickTime",
+        "signature": "Nested_GLM_predictLickTime(n, predictorKey, verbose)",
+        "description": "(1:n, 'pretrial_tdtht_1htstiff', false)   \tpredictorKey: \t\n  \t\t\t\t\t'pretrial' \t\t\t9\n  \t\t\t\t\t'pretrial_1htstiff' 10\n  \t\t\t\t\t'pretrial_tdtht_PC1_3_1htstiff' 13\n  \t\t\t\t\t'PCAbinnedSlope' \t10\n  \t\t\t\t\t'ht'\t\t\t\t8\n  \t\t\t\t\t'ht-stiff-PC1-3' \t11\n  \t\t\t\t\t'ht-tdt'\t\t\t8\n  \t\t\t\t\t'ht-tdtgfit'\t\t11\n  \t\t\t\t\t'ht-trial#^2'\t\t9\n  \t\t\t\t\t'htPCA'\t\t\t\t8\n  \t\t\t\t\t'PC1-3'\t\t\t\t8\n  \t\t\t\t\t'PC1-3htPCA'\t\t11\n  \t\t\t\t\t'ndivs_slope'\t\t6\n  \t\t\t\t\t'PC1-3htPCAmislope'\t12"
+      },
+      {
+        "name": "plotDecodingModelResults",
+        "signature": "plotDecodingModelResults(Mode, n, suppressNsave)",
+        "description": "Mode: \t'summary'   \t\t\t'fit'\n\n  \tn: nests to plot\n  \tsuppressNsave: a folder to save the plot to. will close the plot and not show (for collation)"
+      },
+      {
+        "name": "plotTrialVsThreshold",
+        "signature": "plotTrialVsThreshold(trial2plot, thresholdNum, PCAMode)",
+        "description": ""
+      },
+      {
+        "name": "plotPrepHT_GLM",
+        "signature": "plotPrepHT_GLM()",
+        "description": ""
+      },
+      {
+        "name": "prepthresholdcrossing",
+        "signature": "prepthresholdcrossing(overrule, PCAmode, smoothing_samples, presmoothPCA, signalName, stiffWindow, minTrialsXing)",
+        "description": "smoothing_samples is the smoothing of PCs AFTER fitting (or smoothing of raw data) before putting into threshold model   \tpresmoothPCA is how much to pre-smooth the gfit before putting it into PCA"
+      },
+      {
+        "name": "undoExclusions",
+        "signature": "undoExclusions(originalFlick, originalflickTrialIdx, originalPosFlick)",
+        "description": ""
+      },
+      {
+        "name": "redoExclusions",
+        "signature": "redoExclusions(originalFlick, originalflickTrialIdx)",
+        "description": ""
+      },
+      {
+        "name": "makeBlock",
+        "signature": "makeBlock(nblocks, v)",
+        "description": "v = 'times', 'one', 'outcome' \n  \tUsed to test the idea that reward rate is correlated with baseline."
+      },
+      {
+        "name": "savegfit",
+        "signature": "savegfit()",
+        "description": "saves gfit in the GLM struct to a file for reuse"
+      },
+      {
+        "name": "getTSkernel",
+        "signature": "getTSkernel(STDmult, kernelSig, gfitSig, smoothing)",
+        "description": "Use this to define the kernel of a movement signal spike onto arbitrary signal (like gfit) with varying STD-multiplier   \t\tUsing for Movement signal building for nestedGLM 3/15/19\n  \tNote, not ok to use for CamO - sampling rate is off"
+      },
+      {
+        "name": "plotTSbyTrialANDTrimTSbyTrial",
+        "signature": "plotTSbyTrialANDTrimTSbyTrial(smoothing)",
+        "description": "For encoding GLM supplement. Plots the gfit with specified smoothing and also the trimTS with the trial boundaries overlaid"
+      },
+      {
+        "name": "trimTSbyLOItoLick",
+        "signature": "trimTSbyLOItoLick(ts, Hz)",
+        "description": "trimTS is the chop/concat version of the timeseries from Lamp-off to first lick   \ttrimIdxs is the indicies of the trimmed data samples wrt the original ts \n  \t\t(so for EMG, must downsample first to get aligned correctly, then to get back to real time, must double the number of samples)\n  \t\twe will keep both chop time and original time as options for debug (3/15/19)\n  \tNOTE NEEDS ADDITIONAL WORK FOR CAMO POTENTIALLY!"
+      },
+      {
+        "name": "aveAlignedTStoTimestamps",
+        "signature": "aveAlignedTStoTimestamps(ts, stamps, nSamples, stampsMultiplier)",
+        "description": "Here we can take any timeseries, ts, and align it to any timestamp (stamps = in samples)   \t\tWe return the average of the aligned data (calculated as a running average) with number \n  \t\tof samples on EITHER side of event = nSamples"
+      },
+      {
+        "name": "cameraDifferenceSignal",
+        "signature": "cameraDifferenceSignal(video_struct, video_start_time, iter)",
+        "description": "6. Calculate the difference signal for camera data \n-----------------------------------------------------------------------------------------"
+      },
+      {
+        "name": "findTriggerFrame",
+        "signature": "findTriggerFrame(video_struct, beginTime)",
+        "description": "4. Identify the trigger zone with the first video image:-------------------------------- \n  \t1. Collect first recorded image:"
+      },
+      {
+        "name": "gfitCamera",
+        "signature": "gfitCamera(CamOtimes, IRtrig, Mode, iter, usePreprocessed)",
+        "description": ""
+      },
+      {
+        "name": "progressBar",
+        "signature": "progressBar(iter, total, nested, cutter)",
+        "description": ""
+      },
+      {
+        "name": "redoNMBgfitChR2",
+        "signature": "redoNMBgfitChR2(ntrials, Window)",
+        "description": ""
+      },
+      {
+        "name": "buildStaticBaselineANOVADataset",
+        "signature": "buildStaticBaselineANOVADataset(baselineWindow, ts, baselineLickMode, refEvent, centerOffsetFromRefEvent, verbose)",
+        "description": "Baseline window is relative to Lamp-Off here, unless specified   \t\trefEvent = 'lampOff' or 'cue'\n\nOLD VERSION:\n  \tBaseline window - : consider BEFORE event as baseline\n  \tBaseline window + : consider AFTER event as baseline\nNOW BASELINE WINDOW IS ALWAYS +, it's the center offset from ref that decides if we are before or after\n\nNEW VERSION:\n  \tcenterOffsetFromRefEvent: This number of samples gets subtracted from the reference event to determine the centering of the sliding window\n  \t\t- : before ref event\n  \t\t+ : after ref event"
+      },
+      {
+        "name": "slidingBaselineANOVA",
+        "signature": "slidingBaselineANOVA(baselineLickMode, verbose)",
+        "description": "baselineLickMode: 'off' (don't worry about lick, 2-way ANOVA)   \tbaselineLickMode: 'exclude' (ignore trials with lick in baseline window, 2-way ANOVA)\n  \tbaselineLickMode: 'include' (3-way anova including lick presence as predictor)\n\n  \tset datanotFstat to true if you want to use the data itself in the selectivity index. If want to use the Fstat, leave this false (default and original version)\n  \t\tthis was added 2/23/2020, see Lab Notebook ppt on baseline analysis figure s4 finalization\n  \t\t(actually we get it for free, so just updating the methods. We want the dataScore output)"
+      },
+      {
+        "name": "plotDivergenceIndicies",
+        "signature": "plotDivergenceIndicies(suppressNsave)",
+        "description": ""
+      },
+      {
+        "name": "getIndex",
+        "signature": "getIndex(pref, null)",
+        "description": "For outcome index, Early is always preferred (because it's higher generally in dF/F)"
+      },
+      {
+        "name": "bootOutcomeDivergenceIndex",
+        "signature": "bootOutcomeDivergenceIndex(nboot, smoothing, outcomeMode)",
+        "description": "Idea is we will get an average index with CI from bootstrapping"
+      },
+      {
+        "name": "buildOutcomeDivergenceIndex",
+        "signature": "buildOutcomeDivergenceIndex(smoothing, outcomeMode)",
+        "description": "Divide trials into 4 categories: EE, ER, RE and RR   \tLooking at divergence index\n  \t\tEE,ER -- diverge\n  \t\tRE, RR -- diverge\n  \t\tEE,RE -- converge\n  \t\tER,RR -- converge\n\n  \tUses dF/F up to 1500+ LO\n\n  \toutcomeMode:\n  \t\tall -- spans 0-3.333, 3.333-17\n  \t\tRE -- 0-3.333, 3.333-7\n  \t\tnorxn -- 0.7-3.33, 3.34-17"
+      },
+      {
+        "name": "ANOVA",
+        "signature": "ANOVA(groups, runANOVA, Debug)",
+        "description": ""
+      },
+      {
+        "name": "getBinnedTimeseries",
+        "signature": "getBinnedTimeseries(ts, Mode, nbins, timePad, trialsIncluded, samples_per_ms_xticks, verbose, handles, conditionNm1RewOrEarly)",
+        "description": "handles is a 1x2 vector of subplot handles for histogram mode (hist_h, cdf_h) \n  \tconditionNm1RewOrEarly will take whatever trialsIncluded and condition these on outcome of prior trial\n  \t\t\teither 'Early' or 'Reward'\n\n  \tWill bin timeseries with the session behavioral markers in obj.GLM\n  \t\tNOTE: timepad is in SAMPLES -- adjust it to the signal of interest\n\n  \tModes:\n  \t\t'Custom' -- nbins is the user input bin windows\n \t\t'Custom-Juice' -- LTA is wrt juice\n\n  \t\t'histogram' -- used to pull out histogram and cdfs easily\n\n  \t\t'SingleTrial' -- makes a bin for every trial in the session\n\n  \t\t'SingleTrialwrtLO' -- same idea, but bins wrt LIGHTS OUT\n \t\t'juice-aligned-single-trial' -- same idea but wrt JUICE onset\n\n  \t\t'Times' -- nbins = total number of bins.\n\n \t\t'Times-LampOff' -- does the usual Times thing, but in the CTA will align to lampoff of the same trial\n\n \t\t'Times-LampOff-NextTrial' -- does the usual Times thing, but in the CTA will align to lampoff of the NEXT trial\n\n  \t\t'Trials' -- nbins = number of trials in each bin\n\n  \t\t'Outcome' -- nbins has no effect\n\n  \t\t'Paired' -- nbins instead is a cell:\n  \t\t\t{# of bins n, [cat1min, cat1max], [cat2min, cat2max]}. Time windows wrt cue on in ms\n\n  \t\t'Triplet' -- nbins instead is a cell:\n  \t\t\t{# of bins n, [cat1min, cat1max], [cat2min, cat2max]}. Time windows wrt cue on in ms\n\n  \t\t'Paired-nLicksBaseline' -- nbins instead is a cell:\n  \t\t\t{# of bins n, [cat1min, cat1max], [cat2min, cat2max], baselineWindow (ms)}. Time windows wrt cue on in ms \n\n \t\t'Times-Unbiased' -- nbins is a cell: \n  \t\t\t{# of bins in range, [range to bin evenly mn, mx]}\n  \t\t\tA bin is added for licks out of range early and late (+2 bins)\n  \t\t\tA bin is added for all excluded/noLick trials Range [0, 0.0001]\n  \t\tearly vs late with same proportion of earlies and lates on trial n-1 going in to each bin\n  \t\t\t-- use this only with dF/F\n\n  \t\t'Histogram' -- plots a histogram of the trialsIncluded\n\n  \t\t'LONTA' -- gets single trial data aligned to lampoff -- puts it in the CTA field to avoid confusion\n\n \t\t'first-ntrials' -- gets the first n trials in each category in the session: nbins: {[beginrange, endrange], [binning in sec]}\n \t\t\tex: obj.getBinnedTimeseries(obj.GLM.gfit, 'first-ntrials', {[1,20], [3.333,7]}, 30000, [200:400]);\n \t\t\t\t\tthis takes the first 20 rewarded trials of trials 200-400 in the session\n\n  \tsNc = cell array of vectors with the number of samples going into timepoint for each bin.\n  \tsNl = likewise, but for the LTA\n\n  \tNew 5/10/23: we will also save the lick time on next trial for each binned trial..."
+      },
+      {
+        "name": "getLONTA",
+        "signature": "getLONTA(rewrite)",
+        "description": ""
+      },
+      {
+        "name": "pairedBaselineRawF",
+        "signature": "pairedBaselineRawF()",
+        "description": "The goal is to check out raw baseline differences... \n\tTime windows defined relative to cue-on\n\nwindows = {[1,100], [101,200], [201,300], [301,400], [401,500], [501,600], [601,700], [701,800], [701,800], [801,900], [901,1000], [1001,1100], [1101,1200], [1201,1300], [1301,1400], [1401,1500], [1501,2500], [2501,3500], [3501,4500], [4501,5500]};\nwinspan = 30000;\nwindivs = 100;\nwindows = cell(winspan/windivs,1);"
+      },
+      {
+        "name": "plotBinOrder",
+        "signature": "plotBinOrder(bins, smoothing)",
+        "description": "Takes the most recent binned timeseries and bins and plots their order at each point"
+      },
+      {
+        "name": "plotNm1andNthtrials_pairedTrialAnalysis",
+        "signature": "plotNm1andNthtrials_pairedTrialAnalysis(ts)",
+        "description": "ts: obj.GLM.rawF default   \t\tobj.GLM.gfit"
+      },
+      {
+        "name": "permuteTimeInSessionIdentity",
+        "signature": "permuteTimeInSessionIdentity(smoothing)",
+        "description": ""
+      },
+      {
+        "name": "plotTrialBleachingWindow",
+        "signature": "plotTrialBleachingWindow(ntrials, Mode)",
+        "description": "Mode: 'raw' or 'gfit'"
+      },
+      {
+        "name": "pairedTrialDFFhelper",
+        "signature": "pairedTrialDFFhelper(idx, Plot)",
+        "description": "Calculates and plots the distortion index as a function of time (diff) as well as the sum (diffsum)"
+      },
+      {
+        "name": "dFF_pairedTrialComparisons_Ratios",
+        "signature": "dFF_pairedTrialComparisons_Ratios(dFFmethod, Plot)",
+        "description": "dFFmethod:\tgfit   \t\t\t\tdigitalIIR\n  \t\t\t\tnbDFF\n  \t\t\t\tnMbDFF"
+      },
+      {
+        "name": "plot_dFF_pairedTrialComparisons",
+        "signature": "plot_dFF_pairedTrialComparisons(dFFmethod)",
+        "description": "dFFmethod:\tgfit   \t\t\t\tdigitalIIR\n  \t\t\t\tnbDFF\n  \t\t\t\tnMbDFF"
+      },
+      {
+        "name": "plotRawVsDFF",
+        "signature": "plotRawVsDFF(dFFmethod, suppressNsave)",
+        "description": "dFFmethod:\tgfit   \t\t\t\tdigitalIIR\n  \t\t\t\tnbDFF\n  \t\t\t\tnMbDFF"
+      },
+      {
+        "name": "plotCorrectedDFF_LTA_overlay",
+        "signature": "plotCorrectedDFF_LTA_overlay(Style)",
+        "description": ""
+      },
+      {
+        "name": "correct_photometry_by_stim_artifact",
+        "signature": "correct_photometry_by_stim_artifact(artifact, Style, bl, ntrials)",
+        "description": ""
+      },
+      {
+        "name": "loadRawF",
+        "signature": "loadRawF(sigStruct)",
+        "description": ""
+      },
+      {
+        "name": "isSingleSeshObj",
+        "signature": "isSingleSeshObj()",
+        "description": ""
+      },
+      {
+        "name": "simulateEqualBaseline",
+        "signature": "simulateEqualBaseline(baselineWin)",
+        "description": ""
+      },
+      {
+        "name": "normalizedBaselineDFF",
+        "signature": "normalizedBaselineDFF(baselineWin, setBaselineZero)",
+        "description": ""
+      },
+      {
+        "name": "normalizedMultiBaselineDFF",
+        "signature": "normalizedMultiBaselineDFF(baselineWin, nTrials, ts, verbose, stdThresh, trialsIncluded, ignoreshortbeginning)",
+        "description": ""
+      },
+      {
+        "name": "testBaselineDistortion",
+        "signature": "testBaselineDistortion(simType)",
+        "description": ""
+      },
+      {
+        "name": "gfitBox",
+        "signature": "gfitBox(ts, win)",
+        "description": ""
+      },
+      {
+        "name": "gFitBasicFilter",
+        "signature": "gFitBasicFilter(ts, cutoff_f, fs, setObj)",
+        "description": ""
+      },
+      {
+        "name": "testGFitWindow",
+        "signature": "testGFitWindow(baselineWin, gFitWin, simData)",
+        "description": "The goal is to simulate data in which the baselines are  \tall equal, then see if gFitting causes distortion\n\n\tCreated 1/3/19, Mod 1/3/19\n----------------------------------------\n\n\tFirst, check the obj type is appropriate + load variables..."
+      },
+      {
+        "name": "get_Pavlovian_trials",
+        "signature": "get_Pavlovian_trials()",
+        "description": "Identifies any pav trials. Up to you to exclude them."
+      },
+      {
+        "name": "simulateCTA",
+        "signature": "simulateCTA(EventIdxs, Times, suppressPlot, overlay, simSmoothing)",
+        "description": ""
+      },
+      {
+        "name": "iterAve",
+        "signature": "iterAve(x, c, t)",
+        "description": ""
+      },
+      {
+        "name": "hiPass",
+        "signature": "hiPass(ts)",
+        "description": "Get low pass movement data - 2.5 sec"
+      },
+      {
+        "name": "bandPass",
+        "signature": "bandPass(ts)",
+        "description": "Get smoothed movement data"
+      },
+      {
+        "name": "bandPassAcc",
+        "signature": "bandPassAcc()",
+        "description": ""
+      },
+      {
+        "name": "rebinObj",
+        "signature": "rebinObj(Mode, nbins)",
+        "description": "We will take the existing object and bin more grossly. Note this won't work if we want more bins than the original, so don't allow this case!"
+      },
+      {
+        "name": "getCellListOfObj",
+        "signature": "getCellListOfObj(priorList)",
+        "description": ""
+      },
+      {
+        "name": "combineObj",
+        "signature": "combineObj(obj2, Mode, saveMode)",
+        "description": ""
+      },
+      {
+        "name": "trial2lickTrim",
+        "signature": "trial2lickTrim(trials, flickIdx)",
+        "description": "Finds the positions within the trial window (lights-off up to the first lick) and concatenates the photometry data to make this a 1xt array \n \tAdded aIdx as output on 4/11/19 -- this is a matrix that tells us for each trial in a the following\n \t\taIdx = trial #\t|\tstart pos in a \t| end pos in a \t|\ttrial time (s)\t| \tcategory\n--------------------------------------------------------------\n\n \tFind all the positions of lamp-off and first lick. If no first lick in first 7 sec, just leave that trial out, as it's ill-defined. \n\n obj.GLM.pos.lampOff;\n\n \tExplicitly call all the samples between and add them to array of indicies for photometry\n\n idx_b_t = arrayfun(@(lo, lick) lo:lick, obj.GLM.pos.lampOff(trials), obj.GLM.pos.fLick(flickIdx), 'UniformOutput', 0);"
+      },
+      {
+        "name": "build_a_trial2lick",
+        "signature": "build_a_trial2lick(smoothing)",
+        "description": ""
+      },
+      {
+        "name": "getFirstLickCategory",
+        "signature": "getFirstLickCategory(windows)",
+        "description": "Calculates each category and adds the timestamps to the GLM array"
+      },
+      {
+        "name": "pullVarFromBaseWorkspace",
+        "signature": "pullVarFromBaseWorkspace(prompt, Mode)",
+        "description": "Pulls a variable out of the base workspace.   \t\tMode = 'single' or 'multiple'"
+      },
+      {
+        "name": "addEMG",
+        "signature": "addEMG(emgRaw, emgTimes)",
+        "description": "Allows user to add a new EMG-dataset to the object"
+      },
+      {
+        "name": "addX",
+        "signature": "addX(xRaw, xTimes)",
+        "description": "Allows user to add a new X-dataset to the object"
+      },
+      {
+        "name": "addtdt",
+        "signature": "addtdt(allowUI)",
+        "description": "Allows user to add tdt gfit to the obj \n  \tCheck for tdt gfit file in the folder"
+      },
+      {
+        "name": "addMoveControls",
+        "signature": "addMoveControls(forceit, CEDfilepath)",
+        "description": ""
+      },
+      {
+        "name": "getXPositionsWRTgfit",
+        "signature": "getXPositionsWRTgfit(Xtrim_s, push)",
+        "description": ""
+      },
+      {
+        "name": "trimTimestamps",
+        "signature": "trimTimestamps(preXtrim_s)",
+        "description": "Convert to positions and then trim off unneeded stamps. For analog data, just cut down to match the chunk of photometry sampled."
+      },
+      {
+        "name": "makeXrepresentation",
+        "signature": "makeXrepresentation(event, x_style, t, t_times, eventNo)",
+        "description": "Using the x_style command passed in as a cell, we will  \tconstruct a 1xt timeseries representation of the event over the entire dataset\n\nRECALL:\tx_style:\tThis cell array of cells determines how we will represent the events\n\t\t{'none'}\t\t-- use raw signal\n\t\t{'blur', width} -- convolves with a single gaussian of width (in ms) specified -- use with movement signals\n\t\t{'delta', spread = 1} -- transforms timestamps into a one-hot. If there's a spread ~= 1 (e.g., 3), then instead of 01000 --> 01110\n\t\t{'boxcar'} \t\t-- transforms paired timestamps into boxcars of width = distance between timestamps\n\t\t{'ramp'}\t\t-- transforms paired timestamps into a ramp of width = distance between timestamps"
+      },
+      {
+        "name": "stretchedTimeDesignMatrixONEHOT",
+        "signature": "stretchedTimeDesignMatrixONEHOT(x_rep, nonFit)",
+        "description": "CREATES A SUBJECTIVE, stretched in x TIME FEATURE!!!!!!!!!!!!!!!!! -- BUT ONLY ONES   \t\tThe idea is to represent proportions of the interval (1% - 100%...)\n  \t\tMax feature width would then be \n\n  \t\tWe might still want to isolate the cue and the lick from this feature, \n  \t\tsince they will overlap differently on different length trials. But let's start simple...\t\n  \t\tBesides, I can't think of a good way to isolate them, because will have discontinuities at the edges\n\n  \tIn a new version (11/26/18), we will bin time rather than do a percentage, because percentage method \n  \t\tcauses undershoot or overshoot on a given trial length"
+      },
+      {
+        "name": "stretchedTimeDesignMatrix",
+        "signature": "stretchedTimeDesignMatrix(x_rep, nonFit)",
+        "description": "CREATES A SUBJECTIVE, stretched in x TIME FEATURE!!!!!!!!!!!!!!!!!   \t\tThe idea is to represent proportions of the interval (1% - 100%...)\n  \t\tMax feature width would then be \n\n  \t\tWe might still want to isolate the cue and the lick from this feature, \n  \t\tsince they will overlap differently on different length trials. But let's start simple...\t\n  \t\tBesides, I can't think of a good way to isolate them, because will have discontinuities at the edges\n\n  \tIn a new version (11/26/18), we will bin time rather than do a percentage, because percentage method \n  \t\tcauses undershoot or overshoot on a given trial length"
+      },
+      {
+        "name": "scaledHeatDesignMatrix",
+        "signature": "scaledHeatDesignMatrix(x_rep, posAll, nonFit)",
+        "description": "CREATES AN OBJECTIVE TIME FEATURE!!!!!!!!!!!!!!!!! \n  \tSet to true to isolate feature from cue or lick"
+      },
+      {
+        "name": "oneHotDesignMatrix",
+        "signature": "oneHotDesignMatrix(x_rep, pos)",
+        "description": "The x-rep is made by ramp-untrimmed Xrepresentation. Now, for each position in all ramps, we make a feature \n  \tThus: [0 0 0 0 1 2 3 4 5 0 0 0] --> 1: [0 0 0 0 1 0 0 0 0 0 0 0]\n  \t\t\t\t\t\t\t\t\t--> 2: [0 0 0 0 0 1 0 0 0 0 0 0]\n  \tetc\n  \tTo save memory, we can do this:\n  \t\t\t\t\t\t\t\t\t\t   [0 0 0 0 1 1 1 1 1 0 0 0]\n  \tI think we could easily downsample by 10's or even 50s..."
+      },
+      {
+        "name": "tileSpace",
+        "signature": "tileSpace(Width, x_bar, maxW, centering)",
+        "description": "Tiles the centering of each basis curve across all reasonable space    \t(7 sec around centered or 14 sec to right of causal)"
+      },
+      {
+        "name": "makeTaylor2ndDerivVect",
+        "signature": "makeTaylor2ndDerivVect(Width, x_bar, npntsPerMS)",
+        "description": "Makes a 1xn vector of -x^2 curve with width and offset from zero. There's always the same resolution between curves regardless of width"
+      },
+      {
+        "name": "makeHalfCosVect",
+        "signature": "makeHalfCosVect(Width, x_bar, npnts, xgrade)",
+        "description": "Makes a 1xn vector of 1/2 cosine curve with width and offset from zero. There's always the same resolution between curves regardless of width"
+      },
+      {
+        "name": "makeGaussVect",
+        "signature": "makeGaussVect(Width, x_bar, npnts, grade)",
+        "description": "Makes a 1xn vector of gaussian curve with width and offset from zero. There's always the same resolution between curves regardless of width"
+      },
+      {
+        "name": "makeBasis",
+        "signature": "makeBasis(Mode, nBasis, centering, width, spacing)",
+        "description": "Use this function to generate basis sets for constructing the GLM model   \t\tNote that time-shifts will be applied to the behavioral events, NOT to the basis - that won't allow us to to non-causal filtering\n\n  \tbasis: \t{ { {short xs}, [short ys]}, { {mid xs}, [mid ys]}, ... , { {long xs}, [long ys]} } -- use for plotting\n\n  \tnBasis: this is the index for the event for which we are making this basis set. This is needed for recalling and mapping features after processing"
+      },
+      {
+        "name": "alignFeatures",
+        "signature": "alignFeatures(basisSet, basisMap)",
+        "description": "Takes the basisSet and eventNo and makes an array of aligned features for plotting, etc \n----------------------------------------------------\n\n\tAlign all the features:\n\n\t\tFind the minimum x position and the maximum x position"
+      },
+      {
+        "name": "plotBasis",
+        "signature": "plotBasis(basis)",
+        "description": ""
+      },
+      {
+        "name": "convX_basisCos",
+        "signature": "convX_basisCos(X, basis_y, x_bar, eventNo)",
+        "description": "We will shift around the X representation to get x_bar timeshifts in the convolution --------------------------------------------------"
+      },
+      {
+        "name": "initTheta",
+        "signature": "initTheta(nth, Range)",
+        "description": "Randomize coefficients for beginning of GD   \t\tth = [n x 1] vector of coefficient weights"
+      },
+      {
+        "name": "plotFeatureSpace",
+        "signature": "plotFeatureSpace(X)",
+        "description": ""
+      },
+      {
+        "name": "plotFit",
+        "signature": "plotFit(yFit, a, x_events, no_dot_events)",
+        "description": "Plots yFit and actual y = \"a\" for comparison"
+      },
+      {
+        "name": "calcYfit",
+        "signature": "calcYfit(th, X)",
+        "description": "Returns the actual yFit so that you can plot it and stuff"
+      },
+      {
+        "name": "plotFeature",
+        "signature": "plotFeature(src, event, ax, th, X)",
+        "description": "disp('in PlotFeature')"
+      },
+      {
+        "name": "findFeature",
+        "signature": "findFeature(th, X)",
+        "description": "This will plot the coefficients and allow you to click on each one. Then it will plot the corresponding feature ------------------------------------------------- \n\n\tPlot th weights"
+      },
+      {
+        "name": "totalFeatureForEvent",
+        "signature": "totalFeatureForEvent(th, eventNo, bC, xb, n, ax)",
+        "description": "Calculate the overall feature representation for each event \n Use this offline: else\n \t bC = xValidationStruct.basisCurves;\n   xb = xValidationStruct.x_bars\n---------------------------------------------------\n\n\tGet indicies of features for this event"
+      },
+      {
+        "name": "ridge",
+        "signature": "ridge(X, a, x, nobasisEvents, verbose, lam, th)",
+        "description": ""
+      },
+      {
+        "name": "buildFeatures",
+        "signature": "buildFeatures(th0_on, Events, x_style, t, t_times, x_bars, nobasisEvents, basisCurves, trimming)",
+        "description": "Makes a feature representation array for input data -----------------------------------------------------------------------------------"
+      },
+      {
+        "name": "xValidate",
+        "signature": "xValidate(xVS, trimming)",
+        "description": "Using the xValidationStruct from nestedGLM, calculate the loss on new test data"
+      },
+      {
+        "name": "nestedGLM",
+        "signature": "nestedGLM(cannedStyle, trimming, lam, th0_on, Events, x_style, basis, smoothing)",
+        "description": ""
+      },
+      {
+        "name": "getModelResidualsAndR2",
+        "signature": "getModelResidualsAndR2(yActual, yFit, th)",
+        "description": "Resiuduals:  \t\t\tri = yi - xi*thi\n \t\tThe differences between model and fitted data. By definition, \n \t\t\tuncorrelated with all predictors in model\n \t\tIf model has constant x0, then must be uncorrelated with constant\n \t\t\tThus mean(resid) = 0, should follow a normal distribution\n \t\tUse residuals to diagnose problems with the model\n\n  \tResidual std: seems to be the same as the model standard error\n  \t\t\tstd_Resid = sqrt(sum(Resid.^2/(numel(yActual)-numel(th))))\n  \t\tSummarizes the scale of the residuals - the average distance of each point \n  \t\t\tin the fit to the actual data, IOW the margin of error of the fit\n  \t\t\t\te.g., if std_Resid = 0.001 dF/F, we can predict the dF/F signal to \n  \t\t\t\twithin 0.001 dF/F at this point in the timeseries\n  \t\t(n-k) = DOF of model = number of points in timeseries - number of th coefficients\n\n  \t\tUncertainty in this std is proportional to a Chi^2 distribution with (n-k) DOF\n  \t\t\tThis will be used in predictive simulations\n\n  \tHOW TO INTERPRET MODEL:\n \t\t1. Are residuals generally small wrt signal of interest?\n \t\t2. Is std of residuals small enough that we can detect an effect\n  \t\t\tFor ex, std of > 0.01 dF/F would not be very useful if ramps on order of 0.01 dF/F\n  \t\t3. Do residuals have mean = 0 and follow normal distribution?\n  \t\t4. How much variance are we explaining compared to other models?"
+      },
+      {
+        "name": "standardErrorOfModelAndTh",
+        "signature": "standardErrorOfModelAndTh(XtX, th, yActual, yFit, lambda)",
+        "description": "Standard error of the model: \n  \tse_model = sqrt(variance of model) = sqrt((yActual-yFit)^2)"
+      },
+      {
+        "name": "shuffleBaselineGLM",
+        "signature": "shuffleBaselineGLM(nShuffle, win, nHx, lam)",
+        "description": ""
+      },
+      {
+        "name": "baselineGLM",
+        "signature": "baselineGLM(windows, nHx, lam, shuffle_on, plot_on, XV)",
+        "description": "Regression model with the following characteristics: \t \n  \tyi = mean baseline within each window - n(# windows)\n\n  \tXi = {\n  \t\tlick kernel -- just # of licks present (since predicitng a scalar)\n  \t\tEMG kernel -- just # of emg events present (since predicitng a scalar)\n  \t\tvalence = [flick time - 3.3333] -- n(nHx # of trials back to look)\n  \t\ttime of lick on next trial\n  \t\t}\n\n  \tA general note on indexing:\n  \t\tWe will create a dataset at the beginning of everything, and then we will index for all the trials in that set.\n\n  \tInitialize all the inputs..."
+      },
+      {
+        "name": "lagRegressionGLM",
+        "signature": "lagRegressionGLM(nHx, categories, xVstyle, lam, Mode)",
+        "description": "Lag regression will calculate the time from cue-to-lick for all trials \n  \tnHx = number of trials of history to consider\n\n  \tcategories = {'rxn', 'early', 'rew', 'ITI', 'noLick'} (default)"
+      },
+      {
+        "name": "CI95",
+        "signature": "CI95(x)",
+        "description": ""
+      },
+      {
+        "name": "leaveOneOutXValidation",
+        "signature": "leaveOneOutXValidation(X, a, d, lam, dataType, nHx, aplot, aidxs, plot_on, distrib)",
+        "description": ""
+      },
+      {
+        "name": "leaveOneOut",
+        "signature": "leaveOneOut(X, a, nTrialsTest, idx, dataType)",
+        "description": "idx = [indicies of items to leave out] range (1:numItems)"
+      },
+      {
+        "name": "getTrialRangeSansNoLicks",
+        "signature": "getTrialRangeSansNoLicks(maxConsecNoLickTrials)",
+        "description": "Returns trialRange = [minTrial, maxTrial] = [1, maxTrial], where maxTrial is the   \tlast lick+ trial before string of >maxConsecNoLickTrials\n\n \tUsed with obj.baselineGLM()"
+      },
+      {
+        "name": "zScoreVector",
+        "signature": "zScoreVector(v)",
+        "description": "Applies Z score to a vector..."
+      },
+      {
+        "name": "pwfit",
+        "signature": "pwfit(Mode)",
+        "description": ""
+      },
+      {
+        "name": "linreg_slope",
+        "signature": "linreg_slope(binnedFits)",
+        "description": "Find all the bins with a reasonable fit (r^2 > 80%)"
+      },
+      {
+        "name": "LTA_slope",
+        "signature": "LTA_slope(Mode, binrange)",
+        "description": "In general:\t   \t\tFor each bin, calculate the best linear fit by excluding timepoints\n  \t\tStart by going from max distance to cue up to the inflection point and start trimming\n  \t\tSmooth the data first. Use the BINNED AVERAGE\n  \t\tSo for bin 2.5-3.5 sec...\n  \t\t\tCalc linear fit of the data between -3.5 to 0 (lick time) -- calc p value of the slope\n  \t\t\tNow iterate: While the fit is improving, chop points off the right side (we know some of these should be excluded)\n  \t\t\t\tOnce p value stops changing significantly, stop. Report the time before lick we went to\n  \t\t\tNow iterate again: While fit improving, chop points off the left side. Report where we land\n  \t\tThen for ALL the trials, fit a slope in that window\n  \t\tThen compare the variance in slope within a bin to the variance in slope between bins\n\n  \t\tNOTE: best if the same number of trials in each bin, so we might want to consider that in the original binning"
+      },
+      {
+        "name": "linfit_LTA_baseline",
+        "signature": "linfit_LTA_baseline(Mode, UIrange)",
+        "description": "Modes:    \t\twindow: \tgive range of times (in sec) before lick to take average of: 'win', [-6.5, -5]\n  \t\t\t\t\t\t* note: max prior time is 6.5sec\n  \t\tsliding: \tgive a window range and this will get slid over the data starting far out and moving in.\n  \t\t\t\t\t\t* should only take complete windows\t\t\t\t\t\t'slide', [500winsize, 0overlap]"
+      },
+      {
+        "name": "CTAencodingGLM",
+        "signature": "CTAencodingGLM(Mode, trials)",
+        "description": "(DRAFT: 10/10/18) ------- this can't be right -- too many observations for the number of predictors...  \t\tThe model we've seen in the paper \n\n \tENCODING MODEL - how are sensory variables +/- movements encoded in the neural timeseries?\n\n \tMode: \n \t\t'allTS': \tconsider all timepoints in the CTA timeseries\n\n \t\t'2s':\t\tconsider only times up to 2s post cue and exclude any trials where the lick happens before this \n \t\t\t\t\t(though can still use history of earlier movement as predictor)\n\n \tbins:\n \t\t'all' or [n:m,p,q] \tspecify which trials or bins to consider. if is average data, then is bins, otherwise is trials in chronological order\n\n------------------------------------"
+      },
+      {
+        "name": "PPencodingGLM",
+        "signature": "PPencodingGLM()",
+        "description": "(DRAFT: 10/10/18)  \n An encoding model aims to describe p(r|x), the probability of response \n \tr given a set of external variables x on a single trial.\n\n \tr = photometry signal before first lick (or up to some defined point before lick)\n \tx = {lick time, lights off time (or cue-on time), movement signals}\n \tth = model parameters (e.g., weights)\n\n -- When dealing with spike trains, they define this response as a time-varying spike rate, where they have binned time over\n \t\ta certain range of values. For our purposes, I feel that lam_t is simplified to be just dF/F\n\n -- When deadling with spike trains, we get a Poisson probabolity of a rate. Is poisson the right model for \n \t\tphotometry? Could we plug in dF/F as the \"rate\"?\n\n If so, then:\n\n \tp(r|x,th)= @x xt* for 0:T{ p(r_t|x,th)} = p(r_1|x,th)*p(r_2|x,th)*p(r_3|x,th)...\n \t\tr_t = spike count at time = t --> dF/F  measurement for bin\n \t\tlam_t = rate at t --> slope of dF/F???\n \t\td = time bin width (so d (s) * lam_t (sp/s) = sp)\n \t\t\t\t\t\t   (so d (s) * rate (dF/F/s = sF/F))\n\n \tIf Poisson:\n \tp(r|x,th): @x xt* for 0:T{ (d*lam_t)^r_t * e^(-d*lam_t) }\n \tp(r|x,th): @x xt* for 0:T{ (1 [ms] *ddFF [dF/F/ms])^dFF * e^(-1 [ms] * ddFF [dF/F/ms]) }\n \t\t\t\t\tunits: dF/F ^ dF/F * [no unit] & -dF/F ---- how does that work out?\n\n \tsince th = {{ki}, h}, which are used to define rate, lam_t, I think no parameters to fit.\n \t\tseems like all the fitting is in the spike rate...\n\n------------------------------------"
+      },
+      {
+        "name": "plotLOTA",
+        "signature": "plotLOTA(nbins, threshNplot, smoothing, trialRange)",
+        "description": "error('WORKING ON IMPLEMENTING TRIAL RANGE START HERE -- looking to see if the baseline is a bleaching problem 2'' non-stationarity')"
+      },
+      {
+        "name": "fast_lickTimeVSLampOffInterval",
+        "signature": "fast_lickTimeVSLampOffInterval()",
+        "description": "This version for collation for elife Review round 2"
+      },
+      {
+        "name": "lickTimeVSLampOffInterval",
+        "signature": "lickTimeVSLampOffInterval()",
+        "description": "Check the object has the appropriate data-style (needs to contain gfit)"
+      },
+      {
+        "name": "verticalThreshold",
+        "signature": "verticalThreshold(Mode, bins, nthresh, delay, Plot, useTS, smoothing)",
+        "description": "Mode:  \t\t'LTA2l': \t\tWill do in negative time wrt lick\n\n\t\t'CTA2l': \tWill do wrt cue, but also can add a delay to ignore the initial bump, default zero\n\t\t\t\t\tNote that if data is missing (like a bin has been passed), we'll just ignore that for now\n\n\t\t'loTA2l'\tA lights-off triggered average -- will just cut out the lamp off-lamp off periods. \n\t\t\t\t\tTo be used with special binning procedure (overlap-loTA)\n\n\tbins:\n\t\tA list with the bins to be included in the analysis. Default is 'all'. Can specify as [1,4,9], etc. If specified bin is not in range, it is ignored\n\n\tnthresh:\n\t\tNumber of thresholds to array, spaced evenly along the x-space from 0:binMin(end). Default is 1, right at the midpoint\n\t\t\tYou can supply specific thresholds to test, in ms\n\n\tdelay:\n\t\tin ms, ignores a certain amount of time after the cue wrt the threshold crossing\n\n\tPlot:\n\t\tset to 0 or false to suppress plots\n---------------------------------------------------------------"
+      },
+      {
+        "name": "runVerticalThresholdCollate",
+        "signature": "runVerticalThresholdCollate(ntrialsperbin, thresholds_ms, collateID)",
+        "description": ""
+      },
+      {
+        "name": "getCDFAnalysis",
+        "signature": "getCDFAnalysis(rxnwin_s, collateID, suppressNsave)",
+        "description": ""
+      },
+      {
+        "name": "getBinnedLicks",
+        "signature": "getBinnedLicks(ref, s_b4, s_post, rxnwin_s, correctionMode)",
+        "description": "correctionMode:   \t\t\t'all': allow all licks (default, no correction) \t\t\t\n  \t\t\t'exclude_train500': don't allow more than 2 licks in debounce time 500ms (except the 1st 2 licks in a trial)\n \t\t\t'del': Only the licks falling within 500ms of each other that get excluded in exclude_train500\n\n \t\tWARNING: 'NOT IMPLEMENTED YET!!!!!!!!!!!!!!!!!!!!!!!!!!!!! I need to step through and figure out how to exclude licks\n \t\t\t'siITI': Selects only ITI licks. Here rxnwin_s enforces that no other licks be within rxnwin of the lick (on LEFT side)\n \t\t\t'siITI_single_lick': rxnwin_s enforces that no other licks be within rxnwin ON EITHER SIDE OF LICK"
+      },
+      {
+        "name": "getQuantilesOfTrials",
+        "signature": "getQuantilesOfTrials(Qno_to_get, nquantiles)",
+        "description": "store this somewhere in obj so we know what used..."
+      },
+      {
+        "name": "plotBinnedHistogram",
+        "signature": "plotBinnedHistogram(Mode, ref, rxnwin_s, corrected_allowed_lick_number)",
+        "description": "Mode: \t'hxg' \t\t\t= normalized histogram \t\t\t'hxg-counts' \t= absolute numbers of first licks\n\t\t\t'ecdf'\t\t\t= ecdf of first\n\t\t\t'raster'\t\t= plots a raster\nget\n\tref: \t'cue'\t\t\t= cue reference event (standard)\n\t\t\t'lick' \t\t\t\n\t\t\t'lampOff'\n\n\trxnwin_s \t\t\t\t= 0.5 for hyb500, op500\n\t\t\t\t\t\t\t= 0 for op0\n\n\tcorrected_allowed_lick_number: Will exclude certain licks from the All-licks hxg \n\t\t\t\t\t\t\t\t\tand raster if we have excluded them\n\n \t\t\t'all': \t\t\t\tinclude all licks (default)\n\t\t\t'exclude_train500':\tallow 2 licks within 500ms of each other\n\t\t\t'del':\t\t\t\tonly plot the licks excluded from processing with exclude_train500 \n\t\t\t'debug':\t\t\tput all, excluded_trian500 and del in same raster for debugging\n\n\t\t\tAny licks within rxnwin_s of reference event will not be scored as \"first\""
+      },
+      {
+        "name": "plotHistogram",
+        "signature": "plotHistogram(trials, Mode, stimMode)",
+        "description": "'flick', 'flick-composite' (for combined objs), 'lick', 'flick-partition' (put n partitions in trials field and will calc auto)   \t'permitRxn'"
+      },
+      {
+        "name": "getRxnPermittedFlicks",
+        "signature": "getRxnPermittedFlicks(rxnWin)",
+        "description": "For use with rxn window > 0 tasks.   \t\tIf mouse reacts and licks again, we count BOTH in the histogram"
+      },
+      {
+        "name": "helloWorld",
+        "signature": "helloWorld()",
+        "description": ""
+      },
+      {
+        "name": "plotHThistogram",
+        "signature": "plotHThistogram(threshnum)",
+        "description": ""
+      },
+      {
+        "name": "horizontalThreshold",
+        "signature": "horizontalThreshold(Mode, bins, nthresh, delay, direction, Plot, smoothing, useTS, conditionTime, verbose, signal, stiffWindow)",
+        "description": "Mode:  \t\t'LTA': \t\tWill do in negative time wrt lick\n\n\t\t'CTA2l': \tWill do wrt cue, but also can add a delay to ignore the initial bump, default zero\n\n\t\t'SingleTrial':\tGoes in CTA mode up to the time of lick and sees what the activity is around that time.\n\t\t\t\t\tThen it will plot this for us and also give us an R**2 plot\n\n\t\t'Pickthresh':\tDoes CTA2l mode for specified threshold levels -- specify as dF/F\n\n\tbins:\n\t\tA list with the bins to be included in the analysis. Default is 'all'. Can specify as [1,4,9], etc. If specified bin is not in range, it is ignored\n\n\tnthresh:\n\t\tNumber of thresholds to array, spaced evenly along the y-space. Default is 1, right at the midpoint\n\n\tdelay:\n\t\tin ms, ignores a certain amount of time after the cue wrt the threshold crossing\n\n\tdirection:\n\t\tdefault: '+'. Can change this to '-' if you want to look at a downward threshold crossing\n\n\tPlot:\n\t\tset to 0 or false to suppress plots\n\n\tconditionTime: (ms)\n\t\tthis is the minimum latency between threshold crossing and actual lick time. This is important to distinguish from the control channel\n\t\tdefault is 0 (to match prior versions before 12/23/19), but recommend using 500ms to start.\n\n\tverbose: true/false to plot and give printed feedback\n\n\tsignal: either obj.GLM.gfit or obj.GLM.tdt. Only impacts singleTrial Mode. Otherwise, whichever ts gets binned last will be used\n\n\tstiffWindow: 1 if only one point must cross, or > 1 to fix all the points above. pick a number greater than 100000 to indicate should always be over after crossing\n---------------------------------------------------------------"
+      },
+      {
+        "name": "getThresholdCrossings",
+        "signature": "getThresholdCrossings(nSamplesCrossing, threshold, smoothedSets, bins, xmin, xmaxs, direction)",
+        "description": "If nSamplesCrossing == 1: use a simple find operation   \t\t\t\t\t\t== 'lock': must stay over threshold until the end, so use find in reverse from the endpoint\n  \t\t\t\t\t\t== another integer: use the sequence finding operation\n  \tlockSampleBuffer: the minimum samples before threshold in which the signal cannot be above the threshold"
+      },
+      {
+        "name": "htPlotLatency",
+        "signature": "htPlotLatency(results, minLatency, minTrialsXing)",
+        "description": ""
+      },
+      {
+        "name": "runHorizontalThresholdCollate",
+        "signature": "runHorizontalThresholdCollate(ntrialsperbin, collateID, minLatency_ms, PCAversion, doBinned, smoothing_samples, presmoothPCA, verbose, signalName, stiffWindow)",
+        "description": ""
+      },
+      {
+        "name": "nanTrim",
+        "signature": "nanTrim(curve, nanMin, nanMax)",
+        "description": "set all points from nanmin:nanmax to nan"
+      },
+      {
+        "name": "nanORidx",
+        "signature": "nanORidx(idx, r, SPECIAL)",
+        "description": ""
+      },
+      {
+        "name": "zero2nan",
+        "signature": "zero2nan(Zeros, onesMode)",
+        "description": "Convert all zeros to NaN   \t\t** Use onesMode to also convert 1s to nan. This is helpful if don't want to include bins already above thresh in the model"
+      },
+      {
+        "name": "rCorrCoeff",
+        "signature": "rCorrCoeff(y, yfit)",
+        "description": ""
+      },
+      {
+        "name": "rSquared",
+        "signature": "rSquared(y, yfit)",
+        "description": "y = observed y-axis   \tyfit = modeled y"
+      },
+      {
+        "name": "filter",
+        "signature": "filter(x, f_coff, fs, steepness)",
+        "description": "Check if data has non nans, if so, filter it"
+      },
+      {
+        "name": "smooth",
+        "signature": "smooth(ts, OnOff, method)",
+        "description": "OnOff = 0: no smoothing OnOff > 0: the kernel is OnOff"
+      },
+      {
+        "name": "plot",
+        "signature": "plot(pType, bins, inset, smoothing, Order, useTS, Normalize_win_s)",
+        "description": ""
+      },
+      {
+        "name": "heatmapnanhelper",
+        "signature": "heatmapnanhelper(x, ii, binMinPos, CTA)",
+        "description": ""
+      },
+      {
+        "name": "heatmapSignal",
+        "signature": "heatmapSignal(smoothing, mintime_s, Mode)",
+        "description": "Mode indicates the number of trials per bin. use 'singletrial' for individual trials"
+      },
+      {
+        "name": "getBinnedData",
+        "signature": "getBinnedData(data)",
+        "description": ""
+      },
+      {
+        "name": "fixSiITI",
+        "signature": "fixSiITI(data)",
+        "description": "obj.updateLog(['Correcting siITI for exclusions... (' datestr(now,'HH:MM AM') ') \\n']);"
+      },
+      {
+        "name": "updateLog",
+        "signature": "updateLog(inputstr)",
+        "description": "obj.Log.log_data = [obj.Log.log_data, inputstr];   \t\t\tobj.Log.log_str.String = sprintf(obj.Log.log_data);\nfid=fopen(obj.Log.fid_name,'w');\nfprintf(fid, obj.Log.log_data);\nfclose(fid);\n% \n% \tDisplay the log text in Matlab...\n%"
+      },
+      {
+        "name": "generateLog",
+        "signature": "generateLog()",
+        "description": ""
+      },
+      {
+        "name": "correctSamplingRate",
+        "signature": "correctSamplingRate(forceIt)",
+        "description": ""
+      },
+      {
+        "name": "getPlot",
+        "signature": "getPlot(data, v3x)",
+        "description": ""
+      },
+      {
+        "name": "initStimNPhotObj",
+        "signature": "initStimNPhotObj(Mode, nbins, gfitStyle, timePad, stimMode)",
+        "description": "stimMode options: 'stim', 'noStim' --> bins the trials that are either stim'd on or not   \t\t\t\t\t\t'off' --> bins all trials, regardless of stim state\n\n  \tignoreStim: refers to if we want to chop out stimulation times from our data so as to avoid artifacts\n  \t\t\t\tAs of 9/18/19, default will be to not chop when 'off', thus ignoreStim = 0\n  \t\t\t\t\tand to chop when stimulation is on, hence ignoreStim = 1 for 'stim', 'on', or 'noStim'"
+      },
+      {
+        "name": "init_v3x",
+        "signature": "init_v3x(Mode, nbins, gfitStyle, timePad, stimMode, divideByNTrialsPerBin)",
+        "description": ""
+      },
+      {
+        "name": "getInit",
+        "signature": "getInit(iv, gfit, gtimes, xRaw, xTimes, data, v3x)",
+        "description": ""
+      },
+      {
+        "name": "unwrap_Cellstr",
+        "signature": "unwrap_Cellstr(C)",
+        "description": ""
+      },
+      {
+        "name": "setUserDataStandards",
+        "signature": "setUserDataStandards(Caller, f)",
+        "description": ""
+      },
+      {
+        "name": "getSeshName",
+        "signature": "getSeshName()",
+        "description": ""
+      },
+      {
+        "name": "save",
+        "signature": "save()",
+        "description": ""
+      },
+      {
+        "name": "CLASS_photometry_roadmapv1_4",
+        "signature": "CLASS_photometry_roadmapv1_4(data, Mode, nbins, gfit, gtimes, xRaw, xTimes, stimMode, trialsIncluded, nm1conditioning)",
+        "description": "New to v 3.10.1: Can make EMPTY object -- obj = CLASS_photometry_roadmapv1_4('empty') \n\tNew to v 3.10: Can make composite objs with selection of trials from each session. Modes:\n\t\t\t- Default: {'off'} -- this is the same as < v3.10\n\t\t\t- Percentiles of trials within the session: {npartitions, whichPartitionToBinphotometry}, e.g., {4, 4} divides \n\t\t\t\ttrials with flicks into 4 parts and plots the final partition. Histograms will show the hxg in each partition to handle nonstationarity in behavior for eLife rebuttal #1\n\t\t\t- Specific trial numbers -- {[trialstoinclude]} -- this probably shouldn't be used.****\n\t\t\t- nm1conditioning: either 'early', 'reward', or '' -- determines if the n-1th trial should be conditoned\n\n\tVersion 3.x: Now we allow user to select data from a folder of files and to combine using ts methods...\n\t\t\t\tThe idea is that we will be processing multiple files at once. Of course, we could do single files this way, too, instead of using Roadmap in the future\n\t\tdata: a string, '3.x'\n\t\t\tSome variables have different meanings now:\n\t\t\t\tMode tags work with the new ts method -- we will use the ts method to bin the current file, \n\t\t\t\t\tthen we will append it to the main file's binning on each iteration\n\t\t\t\tnbins = depends on Mode\n\t\t\t\tgfit = the gfit style to use. {'RawF'}, {'Box', window}, {'MultiBaseline', nTrials}\n\t\t\t\t\t\tNote that if gfit {'Box', window} is specified, we will look for a gfit file in the folder and if it's not there, we will calc it from scratch...\n\t\t\t\tgtimes = the timepad to use for both CTA and LTA...\n\n\t\tdata: '3.x' for combining data...\n\n\t\tdata: 'stimNphot' to make a stim and phot obj with gfit on the chopped data\n\t\tstimMode = 'off' - no stimulation data (or ignored distinction)\n\t\t\t\t\t'noStim' - only do nonstimulated trials\n\t\t\t\t\t'stim' - use only stimulated trials\n\t\t\tobj = CLASS_photometry_roadmapv1_4('stimNphot', 'times', 17, {'MultiBaseline', 10}, 30000, [], [], 'stim')\n\nHow it works: When we initialize the object, it converts the huge dataset \n\t\t\t\tinto a finely-binned CTA, LTA, and siITI dataset. We can always get fewer bins\n\t\t\t\tby averaging the bins later on.\n\t\t  Mode:\tThis will decide whether we want to use even-timerange blocks or even #s of trials \n\t\t\t\tin each block\n\t\t\t\t\"Times\" or \"Trials\" ---- for times, put the # of bins you want; \n\t\t\t\t\t\t\t\t\t---- for trials, put the number of trials per bin\n\t\t\t\t\"Outcome\"\t\t\t---- breaks into early and rewarded responses (also reaction and ITI)\n-------------------------------------------------------------\n\n\tDefaults: will save after creation of object immediately to the current directory"
+      },
+      {
+        "name": "empty",
+        "signature": "empty(varargin)",
+        "description": ""
+      }
+    ]
+  },
+  "functions": [
+    {
+      "file": "binnedTimeseriesBoilerPlate.m",
+      "name": "binnedTimeseriesBoilerPlate",
+      "description": "binnedTimeseriesBoilerPlate is a script."
+    },
+    {
+      "file": "binnedTimeseriesBoilerPlateSingleTrial.m",
+      "name": "binnedTimeseriesBoilerPlateSingleTrial",
+      "description": "binnedTimeseriesBoilerPlateSingleTrial is a script."
+    },
+    {
+      "file": "binnedTimeseriesBoilerPlateSingleTrialDownSample.m",
+      "name": "binnedTimeseriesBoilerPlateSingleTrialDownSample",
+      "description": "same as single trial but will downsample to 10hz"
+    },
+    {
+      "file": "binnedTimeseriesBoilerPlateSingleTrial_JTA.m",
+      "name": "binnedTimeseriesBoilerPlateSingleTrial_JTA",
+      "description": "binnedTimeseriesBoilerPlateSingleTrial_JTA is a script."
+    },
+    {
+      "file": "binnedTimeseriesBoilerPlateSingleTrial_LONTA.m",
+      "name": "binnedTimeseriesBoilerPlateSingleTrial_LONTA",
+      "description": "get lamp on data"
+    },
+    {
+      "file": "binnedTimeseriesBoilerPlateSingleTrial_WRTLAMPOFF.m",
+      "name": "binnedTimeseriesBoilerPlateSingleTrial_WRTLAMPOFF",
+      "description": "binnedTimeseriesBoilerPlateSingleTrial_WRTLAMPOFF is a script."
+    },
+    {
+      "file": "binnedTimeseriesBoilerPlate_JUICEcustom.m",
+      "name": "binnedTimeseriesBoilerPlate_JUICEcustom",
+      "description": "binnedTimeseriesBoilerPlate_JUICEcustom.m"
+    },
+    {
+      "file": "binnedTimeseriesBoilerPlate_LampOffVersion.m",
+      "name": "binnedTimeseriesBoilerPlate_LampOffVersion",
+      "description": "binnedTimeseriesBoilerPlate_LampOffVersion is a script."
+    },
+    {
+      "file": "binnedTimeseriesBoilerPlate_byTrialsMode.m",
+      "name": "binnedTimeseriesBoilerPlate_byTrialsMode",
+      "description": "binnedTimeseriesBoilerPlate_byTrialsMode is a script."
+    },
+    {
+      "file": "binnedTimeseriesBoilerPlate_timesnexttrial.m",
+      "name": "binnedTimeseriesBoilerPlate_timesnexttrial",
+      "description": "binnedTimeseriesBoilerPlate_timesnexttrial is a script."
+    },
+    {
+      "file": "cannedStyleSheet_nestedGLMv3x8.m",
+      "name": "cannedStyleSheet_nestedGLMv3x8",
+      "description": "cannedStyleSheet_nestedGLMv3x8.m\n  \n  \tCreated \t3/27/19\t\tAllison Hamilos \tahamilos{at}g.harvard.edu\n  \tModified \t3/27/19\t\tAllison Hamilos \tahamilos{at}g.harvard.edu\n  \n  \tVERSION 3.8\n  \t1\t- 5/19/20:\tVersion used for figures in Hamilos et al., 2020"
+    },
+    {
+      "file": "correctPathOS.m",
+      "name": "correctPathOS",
+      "description": "correctPathOS is a function.\n    pathstr = correctPathOS(pathstr, OSspec)\n\n    Other uses of correctPathOS\n\n       CLASS_photometry_roadmapv1_4/correctPathOS"
+    },
+    {
+      "file": "correct_stim_by_single_trial_step.m",
+      "name": "correct_stim_by_single_trial_step",
+      "description": "We see that the optical artifact of stimulation onsets immediately, whereas the change of the biological effect is slower\n \tWe can thus correct the artifact by getting rid of the step on single trials"
+    },
+    {
+      "file": "findTaggedFile.m",
+      "name": "findTaggedFile",
+      "description": "findTaggedFile is a function.\n    Matfile = findTaggedFile(Tag)"
+    },
+    {
+      "file": "getCEDfield.m",
+      "name": "getCEDfield",
+      "description": "getCEDfield is a function.\n    [times, values] = getCEDfield(Matfile, varlist, fieldname)"
+    },
+    {
+      "file": "getlinesandshadebetween.m",
+      "name": "getlinesandshadebetween",
+      "description": "getlinesandshadebetween\n  \n    takes two lines and shades between them"
+    },
+    {
+      "file": "testAIC.m",
+      "name": "testAIC",
+      "description": "testAIC.m"
+    }
+  ]
+}
