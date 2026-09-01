@@ -112,19 +112,19 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 	properties 
 		Plot 			% Keeps track of plotting parameters, including lick times/positions
 		iv 				% Holds on to init variables... or some of them
-		Mode
-		BinParams
-		BinnedData
-		SaveMode
-		Log
-		Stat
-		Stim
-		ChR2
-		gFitLP
-		GLM
-		ts
-		CtrlCh
-		video
+		Mode 		% String flag ('Times', 'Trials', or 'Outcome') set at construction that selects which trial-binning/analysis branch the class's binning and object-combining methods take, and is embedded in auto-generated save filenames. [AI-DOC]
+		BinParams 		% Struct of binning metadata for the trial-triggered averages (e.g. ogBins = the originally requested number of bins, plus nested CLTA-related fields such as bin edges, trials-in-each-bin, and per-bin lick-time lists) that is set during initialization and merged/updated when combining sObjs across sessions or trials. [AI-DOC]
+		BinnedData 		% Struct holding the computed trial-averaged signal traces, chiefly CTA (cue-triggered average) and LTA (lick-triggered average) cell arrays/struct fields indexed by bin (and sub-fields like CTAtoLick, LTA.rxn/early/rew), produced by the binning methods and combined/averaged when merging multiple sObjs. [AI-DOC]
+		SaveMode 		% Boolean flag (true when set) that tells the object's save/processing methods to also write out intermediate copies of the statObj to disk, so work can be recovered if processing crashes partway through. [AI-DOC]
+		Log 		% Struct intended as a lightweight session log (fid_name, log_data text, and historically a log-display figure handle f_log), populated by generateLog(); in practice updateLog()'s body is entirely commented out, so logging is largely inert in the current code. [AI-DOC]
+		Stat 		% Struct holding results of statistical threshold-crossing analyses on the binned/single-trial signal, organized under sub-structs like hThresh and vThresh (each with fields such as b, dev, stats, rsq, crossing times/latencies, and 'CTA2l'/'LTA2l' sub-results), populated by the horizontalThreshold/verticalThreshold-style methods. [AI-DOC]
+		Stim 		% Struct whose key field is a boolean stimobj flag indicating whether this session/object includes an optogenetic-stimulation channel; this flag gates many Mode-dependent (Times/Trials/Outcome) code branches throughout the binning and analysis methods and is checked when combining objects for compatibility. [AI-DOC]
+		ChR2 		% Struct (or contents loaded from a user-selected .mat file) holding optogenetic-stimulation trial bookkeeping when Stim.stimobj is true, notably stim_struct.stimTrials / stim_struct.nostim_trials plus ignoreStim/stimMode flags, used to split trials into stim vs. no-stim bins for CLTA-style analyses. [AI-DOC]
+		gFitLP 		% Struct holding low-pass-filtered/simulated dF/F signal-processing intermediates and parameters (e.g. cutoff_f, steepness, simulated baseline dFF, and multi-baseline-normalized variants under nMultibDFF/nbDFF), used by the class's gFit filtering/simulation diagnostic methods; not part of the main analysis path used elsewhere in the class. [AI-DOC]
+		GLM 		% The central per-session data struct: behavioral-event timestamps (cue_s, lick_s, lampOn_s, lampOff_s, firstLick_s), the fitted/processed photometry signal and its timestamps (gfit, gtimes, gfitMode label), position-indexed copies under GLM.pos, and status flags (Mode, exclusionsTaken, isSingleSeshObj) — this is the primary signal/event data that the rest of the class bins and analyzes (matches README's sObj.GLM.cue_s / GLM.gfit usage). [AI-DOC]
+		ts 		% A working/staging struct that mirrors the BinnedData/BinParams/Plot layout for whichever signal is currently being binned; getBinnedTimeseries() writes its output here first, and callers then copy obj.ts.BinnedData/obj.ts.BinParams/obj.ts.Plot into obj.BinnedData/obj.BinParams/obj.Plot (for the main signal) or into obj.CtrlCh.* (for a control-channel signal), and obj.ts is wholesale swapped/restored in a few places (e.g. when combining sObjs or reverting to an original binning) — matches README's sObj.ts.BinParams.trials_in_each_bin usage. [AI-DOC]
+		CtrlCh 		% Struct holding a parallel set of BinnedData/BinParams/Plot results (with Plot.samples_per_ms and Plot.smooth_kernel) for a secondary 'control' channel — an accelerometer/EMG/X or camera-derived movement signal binned alongside the main photometry signal using the same obj.ts staging mechanism as GLM's primary signal. [AI-DOC]
+		video 		% Struct holding metadata and a derived signal for associated behavioral video recordings: per-video directories and counts (videoDir, saveDir, video_struct_dirname, nVideos), frame/sync bookkeeping across concatenated video files (fileCamOidx, fileCamO_nFrames, IRtrigPos, file1sync), and an accumulated derivativeSignal (e.g. a movement-derivative trace) built up video-by-video by a dedicated video-processing method. [AI-DOC]
 	end
 
 	%-------------------------------------------------------
@@ -374,18 +374,28 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			warning('on','MATLAB:Figure:FigureSavedToMATFile')
 		end
 		function save(obj)
+			% Saves the current object to a .mat file named '<mousename_>_REVISED_stimFixed_<signalname>_statObj.mat' in the current directory (using -v7.3 format), and writes a timestamped confirmation entry to the log via obj.updateLog.
+			% The 'REVISED_stimFixed' naming suggests this save method is specifically used after applying stimulation-artifact correction or other revision steps to the object, distinct from the object-combination save logic in combineObj.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			timestamp_now = datestr(now,'mm_dd_yy__HH_MM_AM');
 			savefilename = strcat(cell2mat([obj.iv.mousename_ '_REVISED_stimFixed_' obj.iv.signalname '_statObj']));
 			save([savefilename, '.mat'], 'obj', '-v7.3');
 			obj.updateLog(['Saved revised object to ' strjoin(strsplit(pwd, '\'), '/') savefilename '.mat (' datestr(now,'HH:MM AM') ') \n']);
 		end
 		function getSeshName(obj)
+			% Builds and stores a session identifier string in obj.iv.sessionCode (mouse name + signal name + day number), only if sessionCode doesn't already exist.
+			% Falls back to obj.iv.signalname{1} for obj.iv.signalname_ if that field is not already set.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if ~isfield(obj.iv, 'sessionCode')
 				if ~isfield(obj.iv, 'signalname_'), obj.iv.signalname_ = obj.iv.signalname{1}; end
 				obj.iv.sessionCode = [obj.iv.mousename_ '_' obj.iv.signalname_ '_' obj.iv.daynum_];
 			end
 		end
 		function Str = setUserDataStandards(obj, Caller, f)
+			% Builds a descriptive metadata string (dataset/session identifiers, signal types, trial counts, mouse names, etc.) for a figure, with the exact fields depending on obj.iv.setStyle ('v3x Combined Datasets', the 'makeCompositeSloshingStimulationESPObj' styles, or a generic single-session fallback that tries a richer field set first and falls back to a minimal set in a try/catch if some fields are missing).
+			% Caller is prepended to Str as a free-text label (e.g. describing the call that produced the figure); Str is returned regardless of whether a figure was supplied.
+			% If a valid figure handle f is passed, attaches Str via set(f,'userdata',Str); otherwise warns that no figure was given and only returns the string.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if strcmp(obj.iv.setStyle, 'v3x Combined Datasets')
 				Mice = unique(cellfun(@(x) x{1}, (cellfun(@(x) strsplit(x, '_'), obj.iv.files, 'uniformoutput', 0)'), 'uniformoutput', 0));
 				nmice = numel(Mice);
@@ -445,6 +455,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 	    	end
 		end
 		function str = unwrap_Cellstr(obj, C)
+			% Recursively converts a nested cell array, numeric/logical array, or struct into a single human-readable string, used to serialize arbitrary parameter/metadata values (e.g. for logging or provenance text).
+			% For cell inputs, converts each element to a string (numeric/logical scalars via num2str, arrays wrapped in brackets, nested cells via recursive obj.unwrap_Cellstr(...) calls, other elements passed through as-is) and joins them with ', ', wrapping the whole result in curly braces.
+			% For plain numeric/logical input, uses mat2str and wraps the result in square brackets; for a struct, recursively unwraps each field's value and prefixes it with the field name, joined with newline escapes; for anything else (e.g. char/string), passes it through obj.correctPathOS(C, 'mac') to normalize path separators.
+			% Final output is passed through sprintf, which also has the effect of interpreting escape sequences like \n embedded in the assembled string.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			
 			if iscell(C)
                 str = {};
@@ -490,6 +505,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		% 				Initialize init_variables (verified 8/12/18)
 		% -----------------------------------------------------
 		function getInit(obj, iv, gfit, gtimes, xRaw, xTimes, data, v3x)
+			% Initializes obj.iv and, for single-day sessions, obj.GLM from the raw init-variable/data structs passed in at object construction, or (when v3x is true) sets up default iv/GLM fields based on the specified gfit style.
+			% For 'combined' vs 'single-day' setStyle, copies over trial timing (cue/lamp-on/lamp-off, lick times), derives first-lick-per-trial via histcounts, and for single-day data optionally prompts the user (questdlg/uigetfile) to load a gfit signal and movement (X/EMG) signals from the base workspace or a .mat file.
+			% In v3x mode, instead sets default total_time_, mousename_, and GLM.gfitMode based on gfitStyle{1} ('box'/'multibaseline'/'ChR2'/'none'/raw F fallback), and zeroes out trial-category counters.
+			% No return value; mutates obj.iv and obj.GLM in place and appends a summary line to the object's log via obj.updateLog.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 8
 				v3x = false;
 			end
@@ -696,6 +716,12 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		% 	Initialize Version 3.x
 		% ----------------------------------------------------
 		function init_v3x(obj, Mode, nbins, gfitStyle, timePad, stimMode, divideByNTrialsPerBin)
+			% Interactive initializer that combines multiple single-session photometry/behavior objects (sObj) selected from a user-chosen directory into one multi-session "v3x" combined statObj.
+			% Prompts the user via dialogs (msgbox, listdlg, uigetdir) to pick signal type(s) (photometry, EMG, accelerometer, camera, optogenetics ChR2, or behavior-only) and a host folder whose subfolders each hold one dataset.
+			% For each subfolder, loads or builds a session sObj, ensures it has an appropriate gfit signal for the requested gfitStyle (box, multibaseline, none, Abs-X, Abs-Xderivative, Abs-bandpass/hipass-EMG, EMG, ChR2, Abs-CamOderivative) -- recomputing from the raw CED/spike2 file and resaving 'sObj_Corrected.mat' when needed -- applies extra exclusions, and rebins/aligns its data via getBinnedTimeseries.
+			% Combines each session's binned CTA/LTA traces into obj using a running weighted average (weighted by trial counts per bin) and accumulates trial-count/metadata bookkeeping (num_trials_category, datasetMap, exclusions, sampling-rate FLAGs).
+			% Sets obj.Mode and obj.iv.setStyle = 'v3x Combined Datasets', then saves the final combined object to a .mat file whose name encodes signal name, mode, bin count, stimMode, trial partitioning, and timestamp.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			useZScore = false; % I changed this on 6/20/19 because I think the Z scoring is causing artifactual scaling.
 			obj.SaveMode = true; % in this case, will save intermediate objects in case of crash in the middle of processing...
 			if ~isfield(obj.iv, 'BingoMODE')
@@ -2759,6 +2785,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		% 				Initialize Plot parameters (verified 8/13/18)
 		% -----------------------------------------------------
 		function data = getPlot(obj, data, v3x)
+			% Initializes and populates the obj.Plot (and obj.CtrlCh.Plot) structure with timing/scaling parameters and lick/event data needed for downstream plotting, branching on the v3x flag.
+			% When v3x is false, copies time-parameter fields (samples_per_ms, first_post_cue_position, lick_zero_position, etc.) from the input data struct, determines obj.iv.setStyle ('combined' vs 'single-day') based on which fields are present, converts lick times/positions into samples/ms/s both wrt the CTA array and wrt cue (0-aligned), and sets up CTA/LTA x-tick arrays and sizes; also calls obj.fixSiITI(data) and returns the (possibly modified) data.
+			% When v3x is true, instead derives obj.Plot.samples_per_ms and obj.Plot.smooth_kernel (and the corresponding obj.CtrlCh.Plot fields) directly from timestamp fields on obj.GLM (gtimes/CamOtimes/ChR2times/Xtimes/EMGtimes) based on obj.iv.signaltype_ and obj.iv.ctrl_signaltype_, flagging obj.iv.FLAG=1 and warning if the inferred sampling rate deviates from the expected 1x or 2x kHz rate; records obj.iv.correctedSamplingRate as the current timestamp.
+			% Contains an explicit warning about a previously discovered '2.7' version bug in lick sample/position calculations that was fixed in this version.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 3
 				v3x = false;
 			end
@@ -2949,6 +2980,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function correctSamplingRate(obj, forceIt)
+			% Recomputes and stores the effective sampling rate obj.Plot.samples_per_ms (and, if present, obj.CtrlCh.Plot.samples_per_ms for a control channel) from the mean spacing between consecutive timestamps in the relevant time vector (gtimes/CamOtimes/Xtimes/EMGtimes), chosen based on obj.iv.signaltype_ (photometry/camera/other).
+			% Sets obj.iv.FLAG = 1 if the computed rate deviates from the expected value (~1 sample/ms for photometry, ~2 samples/ms for camera/EMG/X-type signals); also sets a default smoothing kernel size (obj.Plot.smooth_kernel) per signal type.
+			% If forceIt=true, bypasses the normal computation and simply forces samples_per_ms to 1 for photometry data (used to avoid corrupting sampling rates when building a sloshing model), then returns early.
+			% Stamps obj.iv.correctedSamplingRate with the current date/time when done.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 2
 				forceIt = false;
 			end
@@ -3056,6 +3092,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function generateLog(obj)
+			% Initializes obj.Log with a generated log filename (obj.Log.fid_name, based on current date/time) and an initial header string in obj.Log.log_data noting the object was generated on today's date.
+			% Contains commented-out code for creating a MATLAB uicontrol/figure-based log display window, which is not currently active. No return value.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			todays_date = date;
 			obj.Log.fid_name = ['StatObj Log ', todays_date, '_' datestr(now,'HH.MM')];
 			obj.Log.log_data = ['Statistical Object log 1.0 \n\n Generated on ', todays_date, '\n\n ------------------------------------------------------------------ \n\n'];
@@ -3291,6 +3330,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		% 	Trials verified for 1+ bins: 8/16/18
 		% -----------------------------------------------------
 		function getBinnedData(obj, data)
+			% Bins trial-averaged CTA/LTA/siITI signal data into obj.BinnedData according to obj.Mode ('Times', 'Trials', or 'Outcome') and whether obj.Stim.stimobj is set, producing separate stim/unstim binned sets when stimulation is present.
+			% In 'Times' mode, divides total trial time into obj.BinParams.ogBins equal-width time bins (bin edges in ms wrt cue) and assigns trials to bins by first-lick time; in 'Trials' mode, sorts trials by lick time and divides into equal-sized trial-count bins; in 'Outcome' mode, uses fixed edges for reaction/early/reward/ITI windows.
+			% For each bin, averages (nanmean) the photometry signal across trials in that bin for CTA, CTAtoLick, LTA (split into rxn/early/rew/ITI/All sub-categories), and siITI, and records bin edges, trial membership, and legend strings in obj.BinParams.
+			% When obj.Stim.stimobj is true, repeats the binning separately for stim and no-stim trial subsets (obj.ChR2.stim_struct.stimTrials / nostim_trials), storing results under obj.BinnedData.stim / obj.BinnedData.unstim. Contains an explicit warning that bin centers/handling may have unresolved errors and several branches marked incomplete or not-fully-vetted.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			warning('CHECK BIN CENTERS IN CLTA/siITI!!!!!!!!! May be an error (11/1/18)')
 			if strcmpi(obj.Mode, 'Times') && ~obj.Stim.stimobj
 				obj.updateLog(['Attempting to bin data with even blocks of time... (' datestr(now,'HH:MM AM') ') \n']);
@@ -4613,6 +4657,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
    %                  end
 		end
 		function y = heatmapnanhelper(obj,x,ii,binMinPos, CTA)
+			% Helper that NaNs out one side of a trace x at a bin-specific boundary index, used to blank out-of-range samples before heatmap-style plotting of per-bin traces.
+			% ii indexes into binMinPos (a cell array of per-bin boundary positions); CTA (logical) selects whether to blank from binMinPos{ii} through the end of x (true) or from the start of x up to binMinPos{ii}-1 (false); returns the modified trace y.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if CTA
 				x(binMinPos{ii}:end) = nan;
 			else
@@ -4638,6 +4685,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		%		if not entered or empty, Normalize = false;
 		% -----------------------------------------------------
 		function [f1,ax] = plot(obj, pType, bins, inset, smoothing, Order, useTS, Normalize_win_s)
+			% Plots trial-averaged dF/F traces for a specified event alignment (CTA, CTA2l, CTA/CTA2l overlay, CLTA, LTA, LTA2l, or siITI) across a set of bins, handling both plain photometry datasets and optogenetic experiments where stimulated and unstimulated trials are plotted side by side.
+			% pType selects the alignment type; bins selects which bins to plot (numeric vector or 'all'); Order ('first-to-last'/'last-to-first') sets plotting order and the linspecer color gradient direction; smoothing sets the obj.smooth kernel (default obj.Plot.smooth_kernel).
+			% useTS switches the data source from obj.BinnedData/obj.Plot to obj.ts.BinnedData/obj.ts.Plot (or accepts a struct with a .ts field to temporarily substitute a different dataset); Normalize_win_s, if given, rescales each trace to its min/max within that window.
+			% inset can be false (new standard figure), true (current axes), or an axes handle to plot into. Returns figure handle f1 and axes handle ax, and stamps the figure's UserData with a description of the call via obj.setUserDataStandards.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin <8 || isempty(Normalize_win_s), 
                 Normalize = false;
                 Normalize_win_s = [];
@@ -6133,6 +6185,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			% 	y = observed y-axis
 			% 	yfit = modeled y
 			% 
+			% Computes the coefficient of determination (R^2) as 1 - SSresid/SStotal, where SSresid is the NaN-robust sum of squared residuals (y - yfit) and SStotal is (n-1)*nanvar(y).
+			% Uses nansum/nanvar so that NaNs present in y or yfit are ignored rather than propagating; also returns yresid = y - yfit as the second output.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			yresid = y - yfit;
 			SSresid = nansum(yresid.^2);
 			SStotal = (length(y) - 1)*nanvar(y);
@@ -6140,6 +6195,8 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function [r, rsq] = rCorrCoeff(obj, y, yfit)
+			% Computes the Pearson correlation coefficient r and its square r^2 between an observed vector y and a fitted vector yfit using corrcoef, returning NaN for both if the result is not a valid 2x2 correlation matrix (e.g., due to NaNs in the inputs).
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			rmat = corrcoef(y,yfit);
             if numel(rmat) == 4
                 r = rmat(2,1);
@@ -6166,6 +6223,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function x = nanORidx(obj, idx, r, SPECIAL)
+			% Small helper that indexes into array r at position idx but returns NaN instead of raising an error if idx itself is NaN (or, when SPECIAL is true, if idx is empty).
+			% The SPECIAL flag (default false) was added specifically to support use in horizontalThresholdPCA, where an empty index should also map to NaN.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 4
 				SPECIAL = false; % added for use in horizontalThresholdPCA
 			end
@@ -6194,6 +6254,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 	%		Methods: Statistical tests and plot commands
 	%-------------------------------------------------------
 		function result = runHorizontalThresholdCollate(obj, ntrialsperbin, collateID, minLatency_ms,PCAversion,doBinned, smoothing_samples,presmoothPCA, verbose, signalName,stiffWindow)
+			% Runs horizontal threshold-crossing analysis on either the gfit (dF/F) or tdt (red channel) signal and collates the resulting fit statistics into a single output struct `result`.
+			% Chooses the signal via signalName ('gfit' or 'tdt', adding the tdt channel via obj.addtdt if missing); if PCAversion is true it instead calls obj.horizontalThresholdPCA on the raw single-trial signal and pulls single-trial crossing stats from obj.Stat.hThresh.CTA2l, handling a special 'no red channel available' fallback case for tdt that fills result with zeros/NaNs.
+			% In the non-PCA branch, it bins licks (obj.getBinnedLicks) and the signal both per single-trial and (if doBinned) in trial-count bins (obj.getBinnedTimeseries), runs obj.horizontalThreshold for each, and copies fit coefficients (b, dev, stats, rsq), crossing latencies/times, and percent-of-trials/bins crossing threshold into result.
+			% Restores the glmfit ill-conditioned warning state at the end; does not return a plotted figure itself but obj.horizontalThreshold(...) is called with plotOn=true, so it triggers plotting as a side effect.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			warning('off','stats:glmfit:IllConditioned');
 			plotOn = true;
 			if nargin < 2 || isempty(ntrialsperbin)
@@ -6410,6 +6475,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			warning('on','stats:glmfit:IllConditioned');
 		end
 		function htPlotLatency(obj, results, minLatency, minTrialsXing)
+			% Plots diagnostic summary figures for the single-trial horizontal-threshold-crossing analysis: number of bins/trials crossing each threshold, latency from threshold-crossing to lick time, percent of trials crossing, fit R^2, and fit slope, all as a function of threshold number.
+			% results supplies the threshold-crossing result struct (fields like singletrial_nbinsXing, singletrial_time2lickFromThreshXing, singletrial_pcTrialsXing, singletrial_rsq, singletrial_b); minLatency (default 0) filters near-zero-latency points from the median/scatter, and minTrialsXing (default 100) flags thresholds with too few crossing trials, plotting them in gray instead of red/highlighted.
+			% Produces two figures: a 4-subplot figure (bins crossing, stacked included-vs-failing-latency-test bar, and a latency scatter with median line) and a 3-subplot figure (% trials crossing, R^2, and slope vs. threshold #).
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 3
 				minLatency = 0;
 			end
@@ -7248,6 +7317,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function plotHThistogram(obj, threshnum)
+			% Plots side-by-side histograms of the horizontal-threshold crossing times and the corresponding actual first-lick times for a given threshold, using obj.Stat.hThresh(1).CTA2l data.
+			% threshnum selects which threshold's xingtimes_s/actualMoveTime to plot; the left subplot's title also reports the number of bins that crossed that threshold and its R^2 from obj.Stat.hThresh(1).CTA2l.nbinsXing/.rsq.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			figure,
 			ax1 = subplot(1,2,1);
 			histogram(ax1, obj.Stat.hThresh(1).CTA2l.xingtimes_s(threshnum).thresh)
@@ -7265,6 +7337,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
         
         function helloWorld(obj)
+            % Prints a greeting to the console along with the time (in seconds) of the first cue in obj.GLM.cue_s, apparently as a simple sanity-check/smoke-test method for a loaded object.
+            % No return value; disp-only side effect.
+            % [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
             disp(['Hello World! First cue time is: ', num2str(obj.GLM.cue_s(1))])
         end
         
@@ -7815,6 +7890,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			obj.GLM.binnedLicks.rxnwin_s = rxnwin_s;
 		end
 		function [ecdf_f, ecdf_x, result] = getCDFAnalysis(obj, rxnwin_s, collateID, suppressNsave)
+			% Computes an empirical CDF of first-lick reaction times (excluding excluded trials) relative to a reaction-window cutoff (rxnwin_s), plots a histogram and eCDF annotated with the omitted-reaction-window and end-of-trial/ITI-start lines, and optionally saves the figure using a collate ID.
+			% Uses obj.getBinnedLicks twice: once to grab and store all lick/first-lick times for general reference, and once (filtered by rxnwin_s) to compute the ecdf itself; excluded trials are set to NaN in both.
+			% Uses obj.iv.BingoMODE to select between two sets of reaction-window/end-of-trial/target timing constants for plot annotation.
+			% Returns ecdf_f/ecdf_x (the empirical CDF) and a result struct containing stored lick/flick times and descriptive notes; saves the figure as 'eCDF_700_<timestamp>_collateID<id>' if collateID is supplied, and/or via obj.suppressNsaveFigure if suppressNsave is supplied.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 3
 				collateID = [];
 			end
@@ -7902,6 +7982,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 		function result = runVerticalThresholdCollate(obj, ntrialsperbin, thresholds_ms, collateID)
+			% Runs vertical-threshold (dF/F level-crossing time vs. first-lick time) regression analysis across a set of dF/F thresholds twice -- once on single-trial binned data and once on trial-binned data (ntrialsperbin trials per bin) -- and collects the results into a struct for later cross-session collation.
+			% Uses obj.getBinnedLicks to get exclusion-aware first-lick times, then obj.getBinnedTimeseries plus obj.verticalThreshold (in 'CTA2l' mode, with plotting enabled) to perform each threshold-crossing regression, pulling results from obj.Stat.vThresh.CTA2l.
+			% Returns result with fields for both the single-trial (singletrial_b/dev/stats/rsq/rsq_alt/r) and binned (binned_b/dev/stats/rsq/rsq_alt/r) analyses, plus bookkeeping (nTrialsTotal, nBinsTotal, nthresh, delay_ms).
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			plotOn = true;
 			if nargin < 2
 				ntrialsperbin = 70;
@@ -9412,6 +9496,8 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function pwfit(obj, Mode) % Will piecewise fit the dataset (CTA or LTA mode)
+			% Stub intended to piecewise-fit the dataset (CTA or LTA, selected via Mode) but immediately issues a 'Not Implemented' warning and does nothing else.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			warning('Not Implemented');
 		end
 
@@ -9426,6 +9512,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		% 
 		% 	Applies Z score to a vector...
 		% 
+		% Computes Z = (v - mean(v)) / std(v) using nanmean and nanstd, so NaN values in v are ignored when computing the mean and standard deviation (but NaN entries of v itself remain NaN in the output Z).
+		% Operates on any numeric vector v; returns the z-scored vector Z with no other side effects.
+		% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 		d_STD = nanstd(v);
 		d_mean = nanmean(v);
 		% 
@@ -9482,6 +9571,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 	end
 
 	function [th, X] = leaveOneOutXValidation(obj, X, a, d, lam, dataType, nHx, aplot, aidxs, plot_on, distrib)
+		% Performs leave-one-out cross-validation of a linear (ridge-regularized) regression model relating predictor matrix X to target vector a, for two supported dataType values: 'lagRegression' (appears incomplete/superseded, and unconditionally raises an error partway through with a note to fix per feedback) and 'baselineGLM' (the working path).
+		% For 'baselineGLM', on each left-out trial iTest it calls obj.leaveOneOut to split X/a into training/test sets, fits theta via ridge regression (Xn*Xn'+lam*I)\Xn*an' (or via glmfit for 'inv-gauss'/'gamma' distrib, both marked untested), computes training and held-out MSE relative to the null (mean) model, and stores per-fold fits/predictions in obj.Stat.lrGLM.
+		% After the fold loop, refits theta on the full dataset (X, a), stores it in obj.Stat.lrGLM.thAll/yFitAll, computes R-squared via obj.rSquared, and (if plot_on) prints summary MSE/CI statistics and generates diagnostic figures of fitted coefficients (with confidence intervals from obj.CI95) split into the nHx 'trials-back' history kernel vs. other GLM features, plus a plot of actual vs. predicted lick times/signal.
+		% Returns th (average/all-data fitted coefficients) and the design matrix X used; heavily mutates obj.Stat.lrGLM and obj.Stat.baselineGLM.FeatureMap-dependent fields as a side effect.
+		% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 		if nargin < 10
 			plot_on = true;
 		end
@@ -9762,6 +9856,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 	end
 
 	function CI = CI95(obj, x)
+		% Computes the 95% confidence interval of the mean using the t-distribution (mean +/- tinv([0.025 0.975], n-1) * SEM).
+		% If x is a 2-D matrix (rows and columns both >1), treats each row as a separate feature/variable and computes a [lower, upper] CI per row (columns treated as repeated samples, e.g. bootstrap/shuffle iterations); if x is a vector, computes a single [lower, upper] CI for it.
+		% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 		if size(x,1) > 1 && size(x,2) > 1
             %
             %   d rows of features, x columns of xvalidations
@@ -10555,6 +10652,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 	function [thShSet, thShMean, thShCI, thShStd, th, p, X, a, yFit] = shuffleBaselineGLM(obj, nShuffle, win, nHx, lam)
+		% Builds a shuffle-based null distribution for the baseline-window GLM (obj.baselineGLM) by refitting it nShuffle times with shuffled data, then compares the real fit's coefficients against that null distribution.
+		% Collects each shuffle's theta vector into thShSet, computes the shuffled mean (thShMean), 95% CI (via obj.CI95) and standard deviation (thShStd) per coefficient, then fits the real (unshuffled) model once via obj.baselineGLM to get th, X, a, yFit.
+		% Computes an empirical two-sided p-value per coefficient as the fraction of shuffled thetas more extreme than the real theta (nMoreExtreme/(nShuffle+1)), and prints the minimum achievable p-value and rounded p-values to the console.
+		% Plots all shuffled thetas, their 95% CI bounds, shuffled mean +/- STD, and the real fit's thetas against feature labels from obj.Stat.baselineGLM.FeatureMap, marking coefficients with p<0.05 or p>0.95 with a black asterisk.
+		% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 		thShSet = [];
 		for iShuffle = 1:nShuffle
 			if rem(iShuffle,5) == 0
@@ -10718,6 +10820,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 		function [th, X, a, yFit, x, xValidationStruct, CVmat] = nestedGLM(obj, cannedStyle, trimming, lam, th0_on, Events, x_style, basis, smoothing)
+		% Fits a (optionally ridge-regularized) linear GLM predicting the photometry dF/F trace from convolved behavioral/movement event regressors built from basis functions, then computes fit diagnostics and stores results on obj.Stat.GLM.
+		% Builds the design matrix X via obj.buildFeatures from the supplied (or a canned-style preset) Events/x_style/basis specification; solves for theta via the analytical ridge normal-equation solution (falling back to gradient-descent ridge via obj.ridge if X*X' is not invertible).
+		% Returns th, X, a (target trace), yFit, x, an xValidationStruct bundling all parameters needed to reproduce/cross-validate the fit, and CVmat; stores model diagnostics (se_model, se_th, signifCoeff, Resid, std_Resid, explainedVarianceR2, basisSet/basisMap/eventMap) into obj.Stat.GLM.
+		% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 		suppressPlot = true;
 		% 
 		%	nestedGLM: takes gfit photometry (2xt+ array, because we need to keep timestamps in 2nd row to make sure we align correctly),
@@ -11542,6 +11648,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 		function [th, yFit] = ridge(obj, X, a, x, nobasisEvents, verbose, lam, th)
+            % Fits GLM coefficients th to design matrix X against target vector a using a hand-rolled batch gradient-descent ridge regression (not MATLAB's built-in ridge/lasso solvers), with L2 penalty strength lam.
+            % Initializes th randomly (scaled by 0.1% of max(a)) unless an initial th is supplied, runs up to 1000 iterations computing mean-squared loss plus lam/2*norm(th)^2 and its gradient each step with a fixed learning rate (eta=1), and stops early if the loss change falls below del_stop or explodes above Loss_explode.
+            % After fitting, computes yFit via obj.calcYfit, plots the loss-vs-iteration curve, calls obj.plotFit(yFit, a, x, nobasisEvents) to visualize the fit against the actual data, and obj.findFeature(th, X) to inspect individual feature contributions.
+            % Returns the final coefficient vector th and the fitted values yFit; also prints diagnostic info (chance-model loss, per-5-iteration loss deltas, final squared loss) to the console when verbose is true.
+            % [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
             disp('========= GRADIENT DESCENT RIDGE REGRESSION =========')
             if nargin < 6
                 verbose = true;
@@ -11745,6 +11856,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 		function plotFeature(obj, src, event, ax, th, X)
 % 			disp('in PlotFeature')
+% Interactive click-callback used with a GUI plot: finds the plotted-line point in axes ax(1) closest to the user's click, highlights it, and then renders that GLM feature's basis shape, weighted contribution, and total event kernel in three companion axes.
+% In ax(2), plots the (unscaled or theta-scaled) basis curve for the selected feature_number from obj.Stat.GLM.basisSet/basisMap, or a flat line at th(feature_number) if the selected feature is the th0 offset term.
+% In ax(3), plots the feature's theta-scaled contribution over the fit design matrix X (th(feature_number).*X(feature_number,:)) across the model's time axis, and in ax(4) plots the corresponding event's total combined kernel from obj.Stat.GLM.totalFeatureForEvent (or X directly for certain event types lacking a basisXaxes match).
+% Uses eval() to dynamically index obj.Stat.GLM.basisSet/basisMap based on the selected feature; has no return value, only side effects on the passed-in axes handles.
+% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			cla(ax(2),'reset')
 			cla(ax(3),'reset')
 			cla(ax(4),'reset')
@@ -11938,6 +12054,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 		function ax = plotFeatureSpace(obj, X)
+			% Plots each row of matrix X as a separate line trace on a single new set of axes, giving a quick multi-trace view of a feature-space matrix.
+			% Returns axes handle ax; no axis labels, legend, or title are added.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			figure, 
 			ax = gca;
 			hold on
@@ -12052,6 +12171,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 		function ax = plotBasis(obj, basis)
+			% Plots each basis-function set in `basis` on a single new axes, using per-set x-values (basis{1,iset}{1,1}, a cell array of vectors) against a shared y-vector (basis{1,iset}{1,2}) via cellfun.
+			% Returns the axes handle ax; opens a new figure and does not add axis labels, a title, or a legend.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			figure;
 			ax =subplot(1,1,1);
 			hold on
@@ -14162,6 +14284,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function Xtrim_pos = getXPositionsWRTgfit(obj, Xtrim_s, push)
+            % Converts timestamps (Xtrim_s, in seconds) into sample-index positions within the gfit/gtimes signal, using a sampling rate estimated from obj.GLM.flush.t_times (falling back to obj.GLM.gtimes if flush.t_times isn't set yet).
+            % push (default false) suppresses a dbstack-based console warning that this method's positions may be unreliable when called from contexts other than nestedGLM/build_a_trial2lick (and, nested one level deeper, simulateCTA), since those methods may have trimmed/altered the dataset.
+            % For signaltype_ other than 'Camera', computes positions analytically from a constant estimated samples-per-ms and a 1ms-at-position-1 offset; for 'Camera' signaltype_ (variable sampling rate), instead finds and rounds to the nearest neighboring obj.GLM.gtimes sample for each timestamp.
+            % [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
             if nargin < 3, push = false;end
 		% 
 		% 	find the position of each timestamp using obj.GLM.gtimes (gets you within 1 ms of actual time) 
@@ -14211,6 +14337,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
             end
 		end
 		function addMoveControls(obj, forceit, CEDfilepath)
+			% Loads any missing 'move control' auxiliary signals (tdt/red channel, movement (X) or EMG) from the raw CED .mat file into obj.GLM, then recomputes the normalized dF/F (obj.GLM.gfit and obj.GLM.tdt) via obj.normalizedMultiBaselineDFF, and marks obj.iv.addMoveControlsComplete so the expensive reload/reprocessing is skipped on subsequent calls unless forceit is true.
+			% Locates the source CED file automatically by filename pattern (or uses the optional CEDfilepath argument), clears obj.GLM.gEMG/EMGtimes/X/rawFchop before reloading, and extracts the 'red'/DLSred field into obj.GLM.tdt and any 'X' or 'EMG' field into obj.GLM.gX/obj.GLM.EMG (band-pass filtered / abs-rectified respectively).
+			% If obj.GLM.stimTrials is non-empty, first corrects both tdt and rawF for the optogenetic stim artifact (via correct_stim_by_single_trial_step) with a 20ms window before computing dF/F; otherwise computes dF/F directly from the raw signals.
+			% Also checks/repairs obj.Plot.samples_per_ms via obj.correctSamplingRate if it appears corrupted, and saves the object (obj.save) when the reload branch runs; a secondary elseif branch re-runs the multibaseline dF/F (without reloading raw signals) if the object's gfitStyle tag indicates it wasn't already computed with the 'multibaseline',10 settings.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 2, forceit=false;end
 			% 
 			%  Will automatically load in any missing move control files, mark the file as updated, and save sObj
@@ -14500,6 +14631,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 		function [a, t_times, t] = build_a_trial2lick(obj, smoothing)
+			% Builds the training vector `a` (photometry samples from cue to first lick, per trial) and its timestamps used to fit the trial-to-lick GLM, selecting which trials to include and in what order.
+			% If obj.GLM.flush.recycleUniformSn is true, reuses the previously chosen trial selection instead of reselecting (then resets the recycle flag).
+			% Otherwise shuffles all trials with a valid first lick, and either (uniformOn, currently hardcoded false) resamples trials so each 1-second lick-latency bin (1-7s) contributes an equal number of trials, or (default) keeps all trials with lick latency under 7s ('sub7'); builds `a`/`t`/`t_times` via obj.trial2lickTrim.
+			% Stores the selected trial indices, per-trial lick-latency category, and bin counts into obj.GLM.flush and obj.Stat.GLM.aIdx.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if isfield(obj.GLM, 'flush') && isfield(obj.GLM.flush, 'recycleUniformSn') && obj.GLM.flush.recycleUniformSn == true
 				% 
 				% 	We want to reuse the trial selection from other nests, so we will not randomize and pick again. Instead, pass on to the end...
@@ -14725,6 +14861,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		%	Unverified 11/1/18
 		% -----------------------------------------------------
 		function obj3 = combineObj(obj, obj2, Mode, saveMode)
+			% Merges two or more previously-binned CLASS_photometry_roadmapv1_4 stat objects into a new combined object obj3 by trial-count-weighted averaging of their BinnedData.
+			% Has two code paths: 'quickNdirty' (single obj2, but immediately errors/deprecated - blocked by an explicit error() before it runs) and 'list' (obj2 is a cell array of objects, combined iteratively one at a time).
+			% Before combining, checks that iv.setStyle, iv.rxnwin_, iv.gfit_win_, Mode, and BinParams.ogBins are compatible between objects (errors if not) and warns on signalname mismatch; if any object was collected with ChR2/optogenetic stimulation (obj.Stim.stimobj), separate stim/unstim BinnedData substructures are combined instead of the plain fields.
+			% Re-aligns CTA/LTA/CTAtoLick/siITI arrays with NaN-padding when the objects' cue, lick-zero, or si-lick-zero reference positions differ, weights each object's binned traces by obj.BinParams.ntrials_per_bin_CLTA / ntrials_per_bin_siITI, sums them with nansum, clears obj3.GLM and BinParams.trials_in_each_bin, and (if saveMode/saving enabled) saves obj3 to a timestamped .mat file.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 4
 				saveMode = 1;
 			end
@@ -15430,6 +15571,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end %/ end combineSets
 
 		function objList = getCellListOfObj(obj, priorList)
+			% Prompts the user to select one or more CLASS_photometry_roadmapv1_4 objects from the base MATLAB workspace, falling back to a file-selection dialog (loading .mat files) if none are chosen from the workspace, and returns them concatenated with any previously supplied priorList.
+			% If the user cancels the file dialog, aborts and returns without assigning objList (silent early return).
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			% 
 			% 	
 			% 
@@ -15477,6 +15621,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 		function bandPassAcc(obj)
+			% Applies obj.bandPass filtering in place to all of the object's binned accelerometer/movement data: obj.BinnedData.CTA, obj.BinnedData.CTAtoLick, each per-bin sub-field of obj.BinnedData.LTA (rxn, early, rew, ITI, All), and obj.BinnedData.siITI.
+			% passmode is hardcoded true, so the filtering step always executes; no return value (mutates obj.BinnedData directly).
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			passmode = true;
 			if passmode
 				% 
@@ -15499,6 +15646,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			%
             %	Get smoothed movement data
             %
+			% Extracts a band-passed component of the movement/timeseries signal ts by first Gaussian-smoothing with a short (50-sample) kernel, then Gaussian-smoothing that result again with a longer (500-sample, ~1 sec) kernel to obtain a low-pass version, subtracting the low-pass from the short-smoothed signal to isolate the band-passed component, and finally re-smoothing that difference with the short 50-sample kernel.
+			% Returns bp, the band-passed signal; relies on an external gausssmooth function.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
             x_sm = gausssmooth(ts, 50, 'gauss');
             %
             %	Get low pass movement data - 1 sec
@@ -15514,6 +15664,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
             %
             %	Get low pass movement data - 2.5 sec
             %
+            % Despite the in-code comment describing the intermediate x_lp as '2.5 sec' low-pass movement data, the smoothing window actually used is 5000 samples (gausssmooth(ts, 5000, 'gauss')).
+            % Returns the high-pass component hp by subtracting that Gaussian-smoothed low-pass signal x_lp from the original input ts (hp = ts - x_lp), i.e. isolates the fast/high-frequency fluctuations in a movement or other timeseries.
+            % [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
             x_lp = gausssmooth(ts, 5000, 'gauss');
             % 
             % 	Get high pass movement data - 2.5 sec
@@ -15522,11 +15675,19 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function ave = iterAve(obj, x, c, t)
+			% Computes one step of an exponential/iterative running-average update: ave = c + (x - c)/t, nudging the current running estimate c toward the new sample x by a factor of 1/t.
+			% Pure helper with no side effects on obj; larger t produces a slower-moving average.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			ave = c + 1/t * (x - c);
 		end
 
 
 		function [x_, compositeSimulatedCurves, individualFeatureCurves] = simulateCTA(obj, EventIdxs, Times, suppressPlot, overlay, simSmoothing)
+			% Reconstructs and plots a simulated composite cue-triggered-average (CTA/CLTA) curve from a fitted GLM's basis functions and coefficients (obj.Stat.GLM.th), evaluated at a series of hypothetical trial durations (Times) for one or more event indices (EventIdxs).
+			% For each requested event, rebuilds that event's kernel contribution differently depending on its EventNames entry (cue, flick, timing-box, timing-ramp-conv, ramp-delta, ramp-delta-norm, stretch-time, stretch-time-ONES, MOVEdelta, tdt, self), including simulating a movement-spike histogram convolved with the MOVE kernel for 'MOVEdelta', and extracting real binned CTA/LTA segments scaled by theta for 'tdt'/'self'.
+			% Sums the per-event feature curves (plus the constant th0 offset term) into a composite curve per time bin, optionally smooths it (obj.smooth), and plots it on ax (new figure or an overlay axis passed via the 'overlay' argument); if suppressPlot is false, also produces a debug figure of MOVEdelta rasters/composite curves and a final figure showing each individual feature curve.
+			% Returns x_ (time axis per bin), compositeSimulatedCurves (per-bin composite curves), and individualFeatureCurves (last-computed per-event curves, including th0).
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			Debug = true;
 			% 
 			if nargin < 2
@@ -16118,6 +16279,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function [lp, f, dFF] = gFitBasicFilter(obj, ts, cutoff_f, fs, setObj)
+			% Applies a basic low-pass-filter-based dF/F correction to obj.GLM.rawF: first denoises by subtracting a 1000-sample moving-average smooth (via obj.smooth) from the raw trace, then replaces any points exceeding 15 STD of that denoised residual with the average of their immediate neighbors (outlier/singularity removal).
+			% Low-pass filters the cleaned raw trace ts with MATLAB's lowpass() (IIR, steepness 0.95) using cutoff_f (default 1/20000) and sampling rate fs (default obj.Plot.samples_per_ms*1000) to get lp and filter object f, then computes dF = ts-lp and dFF = (ts-lp)./lp.
+			% Note: the ts input argument is immediately overwritten by obj.GLM.rawF inside the function, so the caller-supplied ts is effectively ignored for the filtering itself.
+			% Always plots raw vs. low-pass signal and the resulting dFF trace, and opens fvtool/freqz filter-visualization windows; if setObj is true, stores dFF, cutoff_f, and steepness into obj.gFitLP. Returns [lp, f, dFF].
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 5
 				setObj = false;
 			end
@@ -16176,6 +16342,8 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function dFF = gfitBox(obj, ts, win)
+			% Thin wrapper that computes a boxcar-windowed dF/F trace from raw timeseries ts by calling the external function FX_gfitdF_F_fx_roadmapv1_4, converting the window size win to a string (defaulting to '200000') if a numeric value is supplied.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 2
 				win = '200000';
 			end
@@ -16186,6 +16354,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function testdFFstruct = testBaselineDistortion(obj, simType)
+			% Compares how different baseline-correction/filtering methods distort the dF/F signal by simulating data, filtering it, binning by outcome, and plotting overlaid CTAs side by side; requires obj.isSingleSeshObj and loads obj.GLM.rawF/obj.GLM.pos.cue if not already present.
+			% For simType 'nbDFF': generates a simulated normalized-baseline signal (obj.normalizedBaselineDFF(5000,1)), low-pass filters it via obj.gFitBasicFilter, also computes a 200-sample boxcar-filtered version via FX_gfitdF_F_fx_roadmapv1_4, then bins (obj.getBinnedTimeseries) and plots (obj.plot('CTA',...)) five outcome-aligned traces: raw gFit boxcar data, the basic-filter dF/F, the simulated normalized-baseline data, the boxcar-filtered simulation, and the low-pass-filtered simulation; stores results in obj.gFitLP.nbSimulatedDFF/nbSimulated_fc/nbSimulated_baselineWidth.
+			% For simType 'expBaseline': the branch is explicitly marked 'Not implemented' (raises an error immediately) but contains dead/unreachable code that would simulate an exponential-decay baseline replacing each trial's pre-cue window and plot comparisons similarly.
+			% Returns testdFFstruct containing the low-pass (lp), filter coefficients (f), and dFF for the primary simulated/filtered signal.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if ~obj.isSingleSeshObj, error('Inappropriate Obj Type'), end
 			if ~isfield(obj.GLM, 'rawF'), obj.loadRawF, end
 			if ~isfield(obj.GLM, 'pos') || ~isfield(obj.GLM.pos, 'cue'), obj.GLM.pos.cue = obj.getXPositionsWRTgfit(obj.GLM.cue_s);, end
@@ -16315,6 +16488,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 		function [dFF, F0s_by_trial] = normalizedMultiBaselineDFF(obj, baselineWin, nTrials, ts,verbose,stdThresh, trialsIncluded,ignoreshortbeginning)
+			% Computes a normalized dF/F trace by dividing the raw signal into per-trial windows and normalizing each trial to a median baseline pooled from nTrials/2 trials on either side (a running multi-trial baseline), after first removing outlier points more than stdThresh standard deviations from a smoothed/high-pass version of the trace.
+			% Has two modes: the normal case uses obj.GLM.pos.cue for every trial; the "halfway ex4" mode (triggered when trialsIncluded is a strict subset of all trials) instead builds baselines only from the supplied cues, for correcting one segment of a session split by a mid-session artifact.
+			% The pre-trial-1 portion of the signal is corrected separately with a boxcar dF/F (FX_gfitdF_F_fx_roadmapv1_4) unless ignoreshortbeginning is true; final dFF values exceeding stdThresh SD are set to NaN.
+			% Returns dFF (corrected trace) and F0s_by_trial (baseline used per trial); stores intermediate baseline/lick-count bookkeeping into obj.gFitLP.nMultibDFF (dFF/dFF2, style/style2, edgeTrials, nLicksInBaseline).
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin <8
 				ignoreshortbeginning = false; % this forces us to do 200s boxcar for whole 
 				%signal if the beginning is too short. setting to true prevents this and truncates 
@@ -16598,6 +16776,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 		function dFF = normalizedBaselineDFF(obj, baselineWin, setBaselineZero)
+			% Computes a per-trial baseline-referenced dF/F signal (stored in obj.GLM.flush.nbDFF and returned as dFF) by subtracting a smoothed (1000-sample moving average) low-frequency trend from the raw fluorescence, clipping points more than 15 STD above the trend (replacing them with the average of neighboring samples), then normalizing each trial's window against the mean fluorescence in the baselineWin samples immediately preceding that trial's cue.
+			% Lazily loads obj.GLM.rawF via obj.loadRawF and computes obj.GLM.pos.cue via obj.getXPositionsWRTgfit if either is missing; errors if the object is not a single-session object (obj.GLM.isSingleSeshObj).
+			% For each trial, F0 is the mean raw F over [baselineStart(iTrial), cue(iTrial)], and (F-F0)/F0 is applied over the full inter-baseline-start interval; if setBaselineZero is true, the values within each trial's baseline window (and before the very first baseline) are forced to exactly 0.
+			% Also stores the result in obj.gFitLP.nbDFF.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 3
 				setBaselineZero = false;
 			end
@@ -16656,6 +16839,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 		function simData = simulateEqualBaseline(obj, baselineWin)
+			% Simulates a version of the raw fluorescence trace (obj.GLM.rawF) where each trial's pre-cue baseline period is replaced by a flat value equal to that trial's own baseline mean, for baselineWin samples immediately before the cue (obj.GLM.pos.cue).
+			% Computes obj.GLM.pos.baselineStart = obj.GLM.pos.cue - baselineWin + 1 (appending the trace length as a final boundary), then for each trial sets simData over [baselineStart(iTrial):cue(iTrial)] to F0 = nanmean(obj.GLM.rawF) over that same window; also accumulates flattened baseline index ranges into obj.GLM.flush.baselineIdxs_baseline.
+			% Requires obj.isSingleSeshObj and loads obj.GLM.rawF / computes obj.GLM.pos.cue if missing; emits a warning that the intended purpose/correctness of this simulation ('to make normdFF equal these') is unclear. Returns simData; note the nargin<3 check for setBaselineZero appears to be a bug since setBaselineZero corresponds to the unused 3rd would-be argument while baselineWin is actually the 2nd argument.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			warning('I''m not sure how to do this! We want normdFF to make all of these equal when running normBaseline...')
 			if nargin < 3
 				setBaselineZero = false;
@@ -16687,10 +16874,15 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 		function isSingleSesh = isSingleSeshObj(obj)
+			% Returns true if obj.iv.setStyle equals 'single-day', i.e. a boolean check for whether this object represents a single recording session rather than a combined multi-session dataset.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			isSingleSesh = strcmp(obj.iv.setStyle, 'single-day');
 		end
 
 		function loadRawF(obj, sigStruct)
+			% Populates obj.GLM.rawF with the raw fluorescence trace, either from a struct passed in as sigStruct or, if omitted, by prompting the user (via pullVarFromBaseWorkspace, falling back to a uigetfile .mat file picker) to supply one.
+			% Selects the correct field within sigStruct by finding the field name that contains obj.iv.signalname, then extracts its .values as rawF and stores it on obj.GLM.rawF; returns early with a warning if no signal source is ultimately provided.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 2
 				% 
 				% 	Add/Overwrite existing emgFit, emgTimes using UI input
@@ -16713,6 +16905,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
             obj.GLM.rawF = rawF;			
 		end
 		function correct_photometry_by_stim_artifact(obj, artifact, Style, bl, ntrials)
+			% Corrects raw photometry (obj.GLM.rawF) for an optogenetic stimulation voltage artifact using one of three strategies, then recomputes obj.GLM.gfit via normalizedMultiBaselineDFF with baseline window bl and ntrials baseline trials.
+			% 'blank' subtracts a fixed artifact voltage from samples during stim-on periods (obj.GLM.ChR2values > 1.5V); 'local' corrects the artifact using correct_stim_by_single_trial_step within a fixed +/-20ms window around stim onset; 'chop' uses a pre-chopped trace (obj.GLM.rawFchop) that presumably already excludes stim periods.
+			% Records the correction method used in obj.GLM.artifact_correction.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 4, bl = 5000;end
 			if nargin < 5, ntrials = 10;end
 			if strcmpi(Style, 'blank')
@@ -16735,6 +16931,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 	    	end
 		end
 		function plotCorrectedDFF_LTA_overlay(obj, Style)
+			% Generates an overlay figure comparing lick-triggered average (LTA) photometry traces for stimulated vs. non-stimulated trials after applying an artifact correction, with the correction method selected by Style ('local', 'chop', or 'blank').
+			% For Style='blank', prompts the user (uigetfile) to select a blank/calibration file, runs general_calibration_ladder_function on it to get obj.GLM.blank_artifacts, then applies both the min and max artifact magnitudes via obj.correct_photometry_by_stim_artifact and plots each as separate LTA lines (dash-dot) which are later merged into one axes as a shaded patch between the min/max traces.
+			% For 'local'/'chop', applies obj.correct_photometry_by_stim_artifact(nan, Style) only if not already corrected with that method, then bins (obj.getBinnedTimeseries with custom edges [0,500,501,3333,3334,7000,17000]) and plots the LTA for stim trials (dash-dot, thick) and no-stim trials (solid, thick) on the same axes, closing the intermediate figures and copying line objects onto the base axes.
+			% Emits a warning that the local correction method can leave a small artifact near first-lick/end-of-stim due to up to 3-sample jitter between lick and ChR2 stim alignment; produces a single combined figure titled with the Style used (no explicit return value).
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 2
 				Style = 'local'; % blank or chop is other option
 			end
@@ -17071,6 +17272,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
         	% 
         	% 	Mode: 'raw' or 'gfit'
         	% 
+        	% Plots the raw fluorescence trace (Mode='raw', using obj.GLM.rawF) or the dF/F trace (Mode='gfit', using obj.GLM.gfit) over a window spanning ntrials consecutive trials, starting 10 seconds before the first trial's cue, to visualize the worst-case within-session photobleaching/decay.
+        	% The plotted window is computed in raw samples as idxMin = cue_s(1)*1000 - 10000 through idxMin + 18500*ntrials (i.e. an assumed ~18.5s trial duration), with the x-axis relabeled in seconds relative to the first trial's cue via linspace.
+        	% For 'gfit' mode the y-axis is fixed to [-0.14, 0.4] and labeled 'dF/F'; for 'raw' mode the y-axis is unlabeled range and labeled 'F (V)'. Errors if Mode is anything other than 'raw' or 'gfit'. No return value; only produces a figure.
+        	% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
         	if nargin < 3
         		Mode = 'raw';
     		end
@@ -17098,6 +17303,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
             
         end
         function permuteTimeInSessionIdentity(obj, smoothing)
+        	% Diagnostic/control plot that tests for a time-in-session (drift) effect by splitting a session's licked trials into three equal-sized blocks (begin/mid/end) and comparing their outcome-conditioned average signals.
+        	% For each block, bins obj.GLM.gfit by trial outcome (obj.getBinnedTimeseries(..., 'outcome', 5, ...)) and pulls out the 'early' (bin 3) and 'rewarded' (bin 5) cue-triggered-average traces, smoothing each with obj.smooth using the given smoothing window (default 100 samples).
+        	% Produces three figures, each with 3 subplots: the first shows each block's own early vs. rewarded trace side by side; the second and third swap pairs of traces between blocks (e.g., begin-early vs end-rew, or begin-early vs end-early) to visually check whether trace shapes/identities are exchangeable across the session.
+        	% No return value; only produces plots. Ends with a warning reminding the user to add the number of trials per bin to the output/plots.
+        	% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
         	if nargin < 2
         		smoothing = 100;
     		end
@@ -17409,6 +17619,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function getLONTA(obj, rewrite)
+			% Loads Lamp-On timestamps from the session's CED data file (or reuses obj.GLM.lampOn_s) and reconciles the resulting event count against cue and lamp-off events, removing extra/mismatched lamp-on events.
+			% rewrite (default false) forces reloading lamp-on times from disk even if obj.GLM.lampOn_s already exists; requires obj.GLM.lampOff_s and obj.GLM.cue_s to already have matching counts (errors otherwise, directing the user to auto_detect_extra_events.m), and requires obj.GLM.unexpected_trial_starts to be set if a lamp-on/lamp-off mismatch is detected.
+			% When mismatches occur, iterates over suspect trials, plotting a diagnostic figure per candidate; auto-deletes a lamp-on event if it falls before the expected cue (< 1s), otherwise advances to the next candidate and closes the figure; records deleted indices in obj.GLM.killedLampOnIdx.
+			% After reconciliation, asserts lampOn/lampOff counts and cue/lamp interval bounds hold, sets obj.GLM.LONTA_QC_completed = true, and plots QC histograms of cue-lampOff, lampOn-cue, and lampOn-lampOff intervals.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if numel(obj.GLM.lampOff_s) ~= numel(obj.GLM.cue_s)
 				error('we have too many lamp off events. you need to run auto_detect_extra_events.m to get rid of extra events. then, rerun getLONTA to have it figure out which LampON events are not correct to eliminate them!')
 			end
@@ -19455,6 +19670,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 		function [results] = ANOVA(obj, groups, runANOVA, Debug)
+			% Computes one-way ANOVA sums-of-squares, degrees of freedom, mean squares, and group/total variance by hand from a cell array `groups` of per-group sample vectors, and optionally cross-checks against MATLAB's built-in anova1 (via runANOVA) to obtain p_matlab/tbl/stats.
+			% Also computes the non-centrality parameter phi (per Zar's power-analysis formula) and plots minimum detectable difference vs. number of samples per group over a preset range n, to help assess statistical power/required sample size independent of running the actual ANOVA.
+			% Asserts internal consistency (ss_total == ss_error + ss_groups and matching dof) and errors out if these checks fail.
+			% Returns a results struct containing p_matlab, tbl, stats, ss_error/ss_groups/ss_total, dof_error/dof_groups/dof_total, MS_groups/MS_error, var_ea, var_total, phi, and n.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 4
 				Debug = false;
 			end
@@ -19766,6 +19986,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			II = (pref-null)./abs(pref+null);
 		end
 		function plotDivergenceIndicies(obj, suppressNsave)
+			% Plots outcome-divergence (EE-ER and RE-RR) and convergence (RE-EE and RR-ER) selectivity indices over time, each with confidence-interval bounds, in a 4-panel figure using precomputed statistics from obj.Stat.divergenceIndex/convergenceIndex.
+			% Panel titles report the trial counts per outcome category (nEE, nER, nRE, nRR) from obj.Stat.n; all panels are x-limited to [-10, 3] seconds.
+			% Optionally saves and closes the figure via obj.suppressNsaveFigure using a name derived from obj.Stat.outcomeMode.Mode when suppressNsave is supplied.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 2
 				suppressNsave = [];
 			end
@@ -20420,6 +20644,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function redoNMBgfitChR2(obj, ntrials, Window)
+			% Recomputes obj.GLM.gfit using a normalized multi-baseline dF/F fit, first masking out samples near ChR2 stimulation artifacts so they don't contaminate the baseline.
+			% ntrials (default 10, marked deprecated/no-op in a comment) sets the baseline window size in trials for obj.normalizedMultiBaselineDFF; Window (default 5000) is passed through as its window parameter; loads obj.GLM.rawF via obj.loadRawF if not already present.
+			% Identifies samples where obj.GLM.ChR2values > 2 (padded by +/-2 samples) and sets them to NaN in a copy obj.GLM.rawFchop before fitting; sets obj.GLM.isSingleSeshObj = true and records obj.GLM.gfitMode as '<ntrials>trial norm multi baseline'.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 2 || isempty(ntrials)
 				% IS DEPRECATED NO FXN!
 				ntrials = 10;
@@ -20451,6 +20679,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 		function progressBar(obj, iter, total, nested, cutter)
+			% Prints a simple text progress bar to the console showing an ASCII '=' / '-' bar (10 segments) and the current iter/total count with a timestamp, only updating when iter is a multiple of ~10% of total or a multiple of `cutter` (default 1000).
+			% nested (default false) adds a tab-indent prefix for use when this progress bar is displayed under a nested/outer loop's own progress output. No return value; disp-only side effect.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 5
 				cutter = 1000;
 			end
@@ -20473,6 +20704,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 
 		function gfitderivative = gfitCamera(obj, CamOtimes, IRtrig, Mode, iter, usePreprocessed)
+			% Computes a frame-to-frame video 'difference'/motion signal (derivativeSignal) from behavior-camera AVI files and aligns it to the CED (Spike2) IR-trigger/CamO strobe timeline, storing results in obj.video.
+			% Supports two video formats: legacy single-AVI-per-session (prompts for one file via uigetfile) and newer 'M_JPEG' mode where a session's video is split across many ~330MB AVI files; in M_JPEG mode it recursively calls itself (obj.gfitCamera(..., iter+1)) to process each subsequent video file and concatenate their derivative signals, or can load previously-saved per-video 'video_struct' .mat files if usePreprocessed is true.
+			% On the first iteration it locates the IR trigger position in CamOtimes, finds the sync frame via obj.findTriggerFrame, and computes the per-video difference signal via obj.cameraDifferenceSignal; per-video results and progress are saved to disk (obj.progressBar, save of video_struct .mat files).
+			% On the final (iter==1, after recursion unwinds) call it cd's back to obj.video.saveDir and saves the fully concatenated derivativeSignal to 'AbsCamODerivative_v3x9_<version>.mat'; returns gfitderivative, the (possibly partial, then eventually full) derivative signal.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			Debug = 1;
 			% NEW We can now run in M_JPEG mode for multiple video files... 
 			% 		Set Mode  = M_JPEG
@@ -21401,6 +21637,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function [originalFlick, originalflickTrialIdx, originalPosFlick] = redoExclusions(obj, originalFlick, originalflickTrialIdx)
+			% Removes trials listed in obj.iv.exclusions_struct.Excluded_Trials from the first-lick data, deleting the corresponding entries from obj.GLM.firstLick_s, obj.GLM.fLick_trial_num, and obj.GLM.pos.flick in place.
+			% Returns the pre-removal values of firstLick_s and fLick_trial_num (defaulting to obj.GLM's current values if not passed in) along with the original obj.GLM.pos.flick, for reference before mutation.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 2
 				originalFlick = obj.GLM.firstLick_s;
 			end
@@ -21414,6 +21653,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
             obj.GLM.pos.flick(exc) = [];
 		end
 		function undoExclusions(obj, originalFlick, originalflickTrialIdx, originalPosFlick)
+			% Reverts a previously-applied trial-exclusion operation by restoring the first-lick data to caller-supplied original values.
+			% Overwrites obj.GLM.firstLick_s, obj.GLM.fLick_trial_num, and obj.GLM.pos.flick with the originalFlick, originalflickTrialIdx, and originalPosFlick arguments respectively; has no return value and presumably is meant to be paired with a prior call that saved off these original values before excluding trials.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			obj.GLM.firstLick_s = originalFlick;
 			obj.GLM.fLick_trial_num = originalflickTrialIdx;
             obj.GLM.pos.flick = originalPosFlick;
@@ -21600,6 +21842,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			end
 		end
 		function plotPrepHT_GLM(obj)
+			% Fits simple identity-link GLM regressions of first-lick time against three horizontal-threshold-crossing time metrics (min, most-frequent, and max crossing times), computes a pseudo-R^2 (ESS/(RSS+ESS)) for each fit, and plots the raw time series overlay plus three scatter-with-fit subplots comparing flick time to each crossing metric against the unity line.
+			% No return value; produces two figures (a time-series overlay and a 3-panel scatter/fit comparison) but does not save them.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			ymin = obj.GLM.flick_s_wrtc(obj.GLM.ht.min_xtimes>0);
 			ymost = obj.GLM.flick_s_wrtc(obj.GLM.ht.most_xtimes>0);
 			ymax = obj.GLM.flick_s_wrtc(obj.GLM.ht.max_xtimes>0);
@@ -21667,6 +21912,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			ylim([0,7])
 		end
 		function plotTrialVsThreshold(obj,trial2plot,thresholdNum,PCAMode)
+			% Plots a single trial's (or all included trials') dF/F/PCA-reconstructed trace together with markers for cue onset, first-lick time, and the time that trace crosses a given horizontal threshold.
+			% trial2plot selects a trial index or 'all' (defaults to the first trial that crossed the threshold); thresholdNum selects which threshold to use (defaults to obj.GLM.ht.mostXingthreshIdx); PCAMode toggles the signal source between obj.GLM.PCA.Xfitalltrials and obj.ts.BinnedData.CTA, calling obj.prepthresholdcrossing first if the needed obj.GLM.ht.result fields are missing.
+			% Traces are smoothed via obj.smooth using obj.GLM.ht.result.smoothing_samples before plotting; the non-PCA branch currently raises an error because trial-index sorting for that case is unresolved.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 4
 				PCAMode = true;
             end
@@ -22011,6 +22260,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
         	end				
 		end
 		function plotPredictorVsLickTime_decoding(obj,predictorNum,reverse)
+            % Scatter-plots a GLM decoding predictor against (log-scale) lick time, overlays a GLM identity-link fit line, and reports the fit's R^2 in the plot title.
+            % predictorNum selects which predictor/response pair to pull from obj.GLM.decoding.X/.y and obj.GLM.decoding.predictorNames; reverse (default false) swaps which of X/y is treated as the predictor vs. the outcome for both the scatter and the fit.
+            % Both plotted axes are exponentiated for display (y always; X as well when predictorNum==2 or the predictor name contains 'ht'), while glmfit/glmval and the R^2 calculation (ESS/(RSS+ESS)) are computed on the untransformed values.
+            % [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
             if nargin < 3
                 reverse = false;
             end
@@ -22045,6 +22298,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
  			title(['Rsq: ' num2str(Rsq)])			
 		end
 		function plotHTresultVsLickTime_decoding(obj)
+			% Plots single-trial threshold-crossing time vs. first-lick time (restricted to lick times < 7s) for up to three threshold-crossing definitions stored in obj.GLM.ht: minthreshIdx, mostXingthreshIdx, and maxthreshIdx, delegating the actual scatter/fit plotting to obj.plotHTresultVsLickTime_decodingHelper.
+			% For each available threshold index, produces both a linear-scale plot (xlim/ylim [0,7]) and a log-log version, placed into 6 subplot positions (1-3 linear, 4-6 log-log) of a single figure; NaN crossing/lick times are excluded before plotting.
+			% No return value; purely a diagnostic/visualization method that assumes obj.GLM.ht.result.single_trial_xingtimes_s and the threshold-index fields have already been computed (e.g. via prepthresholdcrossing).
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			figure
 			
 			all_licktimes_s = sort(obj.GLM.flick_s_wrtc(obj.GLM.fLick_trial_num));
@@ -22078,6 +22335,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			end
 		end
 		function plotHTresultVsLickTime_decodingHelper(obj, X, y, Title, subplotvector)
+			% Helper that plots a scatter of X (e.g. threshold-crossing time) versus y (lick time) into subplot position subplotvector of a 2x3 grid, fits a simple identity-link GLM (glmfit/glmval) line through the points, and overlays that fit line in red.
+			% Computes an R-squared-like goodness-of-fit ratio as ESS/(RSS+ESS) (explained sum of squares over total, using nansum to tolerate missing values) and displays it in the subplot title along with the caller-supplied Title string.
+			% Labels the axes 'lick time' (y) and 'crossing time' (x); no return value, only plots to the given subplot.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			subplot(2,3,subplotvector)
 			plot(X, y, 'k.', 'Markersize',15)
 			hold on
@@ -22619,6 +22880,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			obj.GLM.decoding.Link = Link;
 		end
 		function Xi = GLM_predictLickTime_buildX(obj, predictor, trials_in_range_first, n, f_lick_s, Debug)
+			% Builds a single design-matrix predictor column Xi for the lick-time GLM, selecting among many named predictor types passed in predictor{1} (e.g. 'prior first lick', 'trial number', 'null', 'early'/'reward'/'reaction'/'ITI'/'NoLick' outcome-time indicators, baseline-median-wrt-lampOff measures, threshold-crossing ('ht'/'tdt ht' min/most/max, optionally PCA-based) times, PCA-derived slope/ramp/PC-coefficient features).
+			% trials_in_range_first indexes into f_lick_s (and other obj.GLM fields) to select the trials being modeled; n and Debug are only used by a subset of predictor types (n appears unused/dead in most branches, Debug enables a diagnostic plot for the 'prior first lick' case).
+			% Most branches normalize Xi to [0,1] (dividing by max) when normalizeAllto0to1 is true, or take log(Xi) otherwise; several branches call obj.prepthresholdcrossing or obj.PCAmeanSlope/obj.PCAbinnedSlope as a side effect and also write derived fields into obj.GLM.decoding or obj.GLM.PCA.
+			% Several legacy/'error' branches ('baseline ave wrt LO', 'ave lights off to cue', 'mean cue-500ms') are marked obsolete/unfinished and immediately raise errors; if predictor{1} matches none of the branches, Xi is left undefined.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 6
 				Debug = false;
 			end
@@ -23112,6 +23378,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 		end
 		function extractSlope(obj, mintime_s,  latencybuffer_s, measurementWindow1_2, n)
+			% Estimates, for each trial, the slope of the dF/F ramp leading up to the first lick by dividing the interval from mintime_s (default 0.7s post-cue) to (lick time - latencybuffer_s) into n even divisions, taking the median dF/F in a small window (+/- measurementWindow1_2 samples) around each division point, then computing the first differences (slopes) between successive divisions and their median per trial.
+			% Builds/uses obj.GLM.flick_pos_wrtc (first-lick position wrt cue) and obj.ts.BinnedData.CTAunsorted (single-trial CTAs restored to original trial order) if not already present, via obj.getBinnedTimeseries(obj.GLM.gfit,'singletrial',...).
+			% Trials where the divided window would start before minPos get NaN/empty slope results. Stores mintime_s/latencybuffer_s/measurementWindow1_2/n and per-trial dfFMedian, slopes, and medianSlope in obj.GLM.slope.
+			% When debug is true (hardcoded), plots up to 5 example single-trial traces with markers for cue, minPos, maxpos, lick, and division points; also always generates a final two-panel figure of per-trial slope curves and median slope vs. lick time.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			debug = true;
 			obj.GLM.slope = {};
 			% 
@@ -23230,6 +23501,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
         
 
         function slopes = PCAbinnedSlope(obj,Mode,pcs, ndivs, verbose)
+        	% Computes a per-bin slope of the PCA-reconstructed dF/F trace across lick-time bins (via obj.binPCAfit), then remaps that slope back onto individual trial indices when Mode is 'singletrial'.
+        	% Mode (default 'singletrial') and pcs (default 1:3) control the binning/PCA components used; ndivs (default 10) sets how many evenly-spaced sample points per bin are used to estimate slope as an endpoint difference over that spacing, after trimming edgebuffer_x=30 samples from each end of the binned trace.
+        	% killLT175 (hardcoded true) NaNs out slopes for bins/trials whose cue-to-lick latency bin edge is below 1.75s.
+        	% Plots a bar chart of mean slope per bin and, if verbose, additional diagnostic figures (per-bin slope segments, histograms of slope by bin vs. by trial, and per-trial slope lines against lick time); returns slopes indexed by bin (non-singletrial Mode) or by trial number (singletrial Mode).
+        	% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
         	killLT175 = true;
 			% 
 			% 	Gathers PCAs with default params for buffers on cue and lick time, no smoothing
@@ -23489,6 +23765,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
     		if ~isempty(suppressNsave), figureName = 'PCAdxMeanInstantaneousSlope';, obj.suppressNsaveFigure(suppressNsave, figureName, f), close(f), end
 		end
         function modelDatasetWithPCA(obj, pcs)
+            % Reconstructs single-trial dF/F traces (Xfit) from the selected PCA components/scores and repackages them per trial, downsampled and aligned to each trial's actual cue-to-lick window.
+            % pcs specifies which principal components to use for reconstruction (Xfit = score(:,pcs)*coeff(:,pcs)'); warns if pcs looks like a scalar greater than 1 rather than a vector such as 1:3.
+            % For each PCA-included trial, builds real-time xticks truncated at (lick time - enforcedlatency - excludetime), gaussian-smooths (smkernel=50ms) and downsamples Xfit to ~1ms resolution while keeping the true first/last sample unsmoothed to reduce edge artifacts.
+            % Stores results into obj.GLM.PCA.Xfit, .Xfitalltrials, .Xfittimes, .Xfittimesalltrials, .Xfit_downsampled_ms, and .Xfit_downsampled_ms_alltrials; no return value.
+            % [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
             smkernel = 50;
         	if numel(pcs)<2 && max(pcs) > 1
         		warning('careful! You need to write pcs as a vector, e.g., 1:3')
@@ -23800,6 +24081,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
             warning('on','stats:glmfit:IllConditioned');
     	end
         function plotPCA(obj,Mode,trial,pcs,insetAx,suppressNsave)
+        	% Plots one of several diagnostic views of the trial's PCA-based cue-to-lick model: 'summary' (variance explained and top-3 PC time courses), 'wtVsLickTime' (PC weight vs. lick time scatter with a GLM fit line and R^2), 'testFit' (single-trial raw vs. interpolated vs. PCA-reconstructed trace comparison), 'Xfitbinned' (binned-average PCA reconstruction), or 'Xfit' (single/multi-trial PCA reconstruction sorted by lick time).
+        	% Automatically calls obj.interpolateForPCA and/or obj.modelDatasetWithPCA if the required obj.GLM.PCA fields are missing.
+        	% pcs selects which principal component(s) to use/display (mode-dependent default); suppressNsave, if non-empty, saves the figure via obj.suppressNsaveFigure and closes it instead of leaving it open.
+        	% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
         	if ~isfield(obj.GLM,'PCA')
 				obj.interpolateForPCA();
 			end
@@ -24551,6 +24836,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function getflickswrtc(obj, overwrite)
+			% Computes each trial's first-lick time relative to cue onset, storing it in obj.GLM.flick_s_wrtc, and (unless obj.iv.signaltype_ is 'none') the corresponding sample position in obj.GLM.flick_pos_wrtc using obj.Plot.samples_per_ms.
+			% overwrite (default false) forces recomputation; the guard condition checks for the existing field obj.GLM.flick_pos_wrtc rather than flick_s_wrtc before deciding whether to (re)compute. No return value; mutates obj.GLM directly.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 2
 				overwrite = false;
 			end
@@ -24565,6 +24853,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
             end
 		end
         function pavlov_trials = getflickswrtj(obj, overwrite)
+			% Computes each rewarded trial's first-lick time relative to juice/reward delivery (obj.GLM.flick_s_wrtj) and, for photometry/camera-type sessions, the corresponding sample position (obj.GLM.flick_pos_wrtj), skipping recomputation unless overwrite is true or the field is missing.
+			% Primary path calls obj.rando_juice_extraction to get juice onset sample positions (obj.GLM.pos.juice), derives juice_onsets from rising edges, and subtracts them from first-lick times for rewarded trials; falls back through nested try/catch blocks using obj.GLM.juice or obj.GLM.juice_s directly if the positional extraction fails, and as a last resort assumes all trials are rewarded (treats data as pretraining/posttraining) and sets obj.GLM.FLAGG accordingly.
+			% Returns pavlov_trials: trial indices where flick_s_wrtj > 0, which the code notes are suspect for being hybrid/pavlovian (non-operant) rewards.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 2
 				overwrite = false;
 			end
@@ -24663,6 +24955,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
             cd(retdir);
 		end
 		function printFigure(obj,name, f)
+			% Saves a figure (the given handle f, or gcf if omitted) to disk in two formats under the given name: a vector .eps file (via print with '-depsc' and '-painters' renderer) and a MATLAB .fig file (via savefig).
+			% Also writes a companion text file '<name>__provenance.txt' recording the figure's 'userdata' and 'name' properties along with the current date/time, for traceability of how/when the figure was produced.
+			% No return value; purely a side-effecting save/export utility.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 3
 				f = gcf;
 			end
@@ -24678,6 +24974,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			fclose(fileID);
 		end
 		function pathstr = correctPathOS(obj,pathstr)
+			% Converts a file path string between Windows- and Unix-style separators depending on the current platform: on Windows (ispc), replaces '/' with '\'; otherwise replaces '\' with '/'.
+			% Returns the corrected pathstr; pure string utility with no other side effects.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if ispc
     			pathstr = strjoin(strsplit(pathstr, '/'), '\');
 			else
@@ -24686,6 +24985,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 		end
 
 		function original_ts_field = rebinCollated(obj,binsToMix,partnerObj)
+			% Merges/averages already-binned CTA and LTA data across either multiple bins within the same object (when partnerObj is empty) or across two objects bin-by-bin (when partnerObj is given), mutating obj.ts.BinnedData and obj.ts.BinParams in place.
+			% For the single-object case, averages (nanmean) obj.ts.BinnedData.CTA/LTA across the bins listed in binsToMix into the first of those bins, updates the trial count in the merged bin's legend string, and sets the other merged-away bins to NaN placeholders with a '-> 0' legend suffix.
+			% For the two-object case, averages each corresponding CTA/LTA bin between obj and partnerObj and updates the combined trial-count legend for every bin.
+			% Returns original_ts_field, a snapshot of obj.ts taken before any modification (for potential rollback); wraps the merge logic in a try/catch that silently warns 'something went wrong' on any error.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 3
 				partnerObj = [];
 			end
@@ -24722,9 +25026,16 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			end
 		end
 		function fixCollated_ts_field(obj, original_ts_field)
+			% Overwrites obj.ts with the caller-supplied original_ts_field struct, discarding whatever obj.ts currently holds.
+			% Appears to be a repair utility for restoring the .ts (timeseries/binning) field after it was altered or corrupted by a prior collation/combination operation.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			obj.ts = original_ts_field;
 		end
 		function singleTrialFigures(obj, lickTimeRange, smoothing, suppressNsave)
+			% Generates and optionally saves a figure of single-trial lick-triggered dF/F traces (CLTA) restricted to trials whose first-lick time falls within lickTimeRange (default [0,30] seconds).
+			% Bins the data via obj.getBinnedTimeseries(obj.GLM.gfit,'singletrial',...,10000,...) then selects bin indices where obj.ts.BinParams.s.CLTA_Min falls in lickTimeRange and plots them with obj.plot('CLTA', idxs, false, smoothing, 'last-to-first', true), applying smoothing (default 200) and x-limits [0,7].
+			% If suppressNsave is provided, saves the figure via obj.suppressNsaveFigure using a filename encoding the smoothing value and current timestamp, then closes the figure.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 4
 				suppressNsave = [];
 			end
@@ -24852,6 +25163,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			if ~isempty(suppressNsave),obj.suppressNsaveFigure(suppressNsave, FILENAME, f);close(f);end
 		end
 		function convertSingleTrialTSIdxToAllTrialsIdx(obj)
+			% Appears to build the trial-index mapping used for single-trial CLTA binning by sorting all trials by their first-lick time relative to cue and taking the first nbins_CLTA sorted trial indices.
+			% Depends on obj.GLM.flick_s_wrtc (recomputed via obj.getflickswrtc) and obj.ts.BinParams.nbins_CLTA; no return value -- mutates obj.ts.BinParams.AllTrialIdx only.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			obj.getflickswrtc;
 			[~,idxs] = sort(obj.GLM.flick_s_wrtc);
 			obj.ts.BinParams.AllTrialIdx = idxs(1:obj.ts.BinParams.nbins_CLTA);
@@ -25113,6 +25427,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			end
 		end
 		function getBinnedLicksMARY(obj, ref, s_b4, s_post, rxnwin_s,Mode)
+			% For each reference event (cue, lick, or lampOff time series selected via `ref`), collects all lick times within [-s_b4, +s_post] of that event and stores them relative to the event in obj.GLM.binnedLicks.lick_s, along with the first lick occurring after ref+rxnwin_s in f_lick_s_wrtref (NaN if none, or if it exceeds obj.iv.total_time_/1000).
+			% Optionally (Mode ~= 'all') reclassifies each windowed lick as 'new' vs. 'del' based on a 500ms debounce rule relative to the lick two positions earlier (i_lick-2): licks within the first two, or spaced >0.5s from the lick two before them, are kept as 'new_lick_s_bt_wrtref'; the rest are NaN'd out in 'new' and instead recorded in 'del_lick_s_bt_wrtref'.
+			% Mode selects which of lick_s_bt_wrtref (all), new_lick_s_bt_wrtref (new), or del_lick_s_bt_wrtref (del) is written to obj.GLM.binnedLicks.lick_s; also stores ref, s_b4, s_post, f_lick_s_wrtref, refevents, and rxnwin_s on obj.GLM.binnedLicks.
+			% Contains assertions that windowed lick times fall within the expected bounds; no return value besides object mutation (the pavlov_trials output arg declared in the signature is not actually assigned in this code).
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 3
 				s_b4 = 5000;
 			end
@@ -25657,6 +25976,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 		end
 		function partitionCLTA(obj, nPartitions)
+			% Splits trials into nPartitions equal-sized, sequential groups (by trial order, not by lick latency), and for each partition bins the photometry signal (obj.GLM.gfit) around cue/lick via getBinnedTimeseries, then plots a cue-lick-triggered-average (CLTA) figure per partition.
+			% Stores each partition's valid (non-NaN first-lick) flick times into obj.GLM.flicks_by_partitions; each plot is titled with mouse/signal/day/partition info and fixed to y-limits [-0.05, 0.05], and its figure UserData is tagged with the calling command.
+			% Produces one figure per partition; figures are not saved to file within this function.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 2
 				nPartitions = 4;
             end
@@ -25800,6 +26123,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
             obj.save();
         end
         function extractRewardedTrials(obj, revise)
+        	% Extracts reward ('juice') delivery timestamps from the raw CED session file and determines which trials were rewarded, storing the trial list in obj.GLM.rewardedTrials.
+        	% Skips the (re)extraction entirely if obj.GLM.juice already exists and revise is false; otherwise loads the session's raw .mat file (via obj.iv.filename_/path_), finds the 'Juice' (excluding 'r2Juice') field, and pulls its .times into obj.GLM.juice_s.
+        	% Handles an 'analog juice' signal case (when there are more juice timestamps than cue events) by using falling edges of the analog .values trace to redefine discrete juice_s events.
+        	% Computes obj.GLM.pos.juice via obj.getXPositionsWRTgfit, bins juice timestamps into trials against obj.GLM.cue_s via histcounts/unique to get juice_trial_num, drops a spurious trial 0 entry if present (falling back to fLick_trial_num or trimming), and sets obj.GLM.revisedRewardedTrials = true when called with revise=true.
+        	% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
         	if nargin < 2, revise = false; end
         	% use this to get trials that are rewarded from sliding rew window task
         	if ~isfield(obj.GLM,'juice') || revise
@@ -25851,6 +26179,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			end
     	end
         function rando_juice_extraction(obj, manual, suppresFigures)
+        	% Extracts per-trial analog juice-reward delivery durations from the CED/spike2 file (juice channel voltage > 1.5V treated as "on"), classifies each trial's duration as low/mid/high relative to the modal duration, and stores the results (juice, juice_durations, juice_low/mid/high) into obj.GLM, resaving the object.
+        	% If manual=true, skips extraction entirely (for use when relying on an MBI tally instead); if the file only has juice timestamps rather than an analog trace, sets obj.GLM.juice from the times and returns early without resaving.
+        	% Unless suppresFigures is true, produces three sets of CTA/LTA-style figures (binned by custom edges, by single-timepoint bins, and by single trial) split by juice-duration category (low/mid/high) for visual QC; no explicit figure saving beyond the default MATLAB figure windows.
+        	% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
         	if nargin < 3, suppresFigures = false;end
         	if nargin < 2, manual = false;end % this is for use if relying on MBI tally
         	if ~manual
@@ -25973,6 +26305,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
     	end
         function getStimCalibration(obj, powerLadder, smoothing, trimRewDeets)
+            % Plots per-power and per-duration averaged dF/F traces aligned to optogenetic stimulation onset and juice delivery, for calibrating stimulation and reward responses.
+            % powerLadder is a struct array with .power_mW and .trials (indices into detected stim events) per power level; smoothing sets the obj.smooth kernel used on each trace; trimRewDeets (default false) controls whether 2 extra subplot columns are reserved for juice-aligned panels (n = length(powerLadder)+2) or not (n = length(powerLadder)).
+            % Detects stim on/off transitions from obj.GLM.ChR2values > 1.5 and juice events from obj.GLM.juice > 1.5 (calling obj.rando_juice_extraction first if obj.GLM.juice_durations is missing); durations of 34ms/199ms are snapped to 35ms/200ms before grouping.
+            % Plots individual trial traces plus the mean trace (bold black) per power level and per juice-duration bin, with onset and stim/juice-duration markers, sharing y-limits across all subplots via linkaxes.
+            % [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
             if nargin < 4, trimRewDeets = false;end
     		% give the function the trials on which stims happened. then let it go from there
     		% 
@@ -26200,6 +26537,9 @@ classdef CLASS_photometry_roadmapv1_4 < handle
             end
         end
         function setLongITIobj(obj, duration_s)
+        	% Marks the current object as representing a long-ITI task variant by setting obj.iv.longITIobj = true and obj.iv.ITIduration_s = duration_s (default 60), and recomputes obj.iv.total_time_ as a hardcoded 14000 ms trial length plus duration_s*1000 ms of ITI.
+        	% Emits a warning that the 14s trial length and hardcoding are specific to the original long-ITI task design and not generalized.
+        	% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
         	if nargin < 2, duration_s = 60;end
         	% 
         	% 	Specifies that this is a longITI task obj and what the ITI was
@@ -26210,6 +26550,11 @@ classdef CLASS_photometry_roadmapv1_4 < handle
         	obj.iv.total_time_ = 14000+duration_s*1000;
     	end
     	function ff = getIntervals(obj, Overwrite, SkipBlockIDs)
+            % Determines and stores each trial's reward-window and inter-trial-interval timing relative to the cue, deriving/cleaning lampOn timestamps from the CED/spike2 file if not already cached, and plots lampOn-cue offsets before/after correction with block boundaries and computed timing overlaid.
+            % If obj.GLM.lampOn_s doesn't exist (or Overwrite=true), loads lampOn times from a matfile (with several fallback search strategies for locating the CED file), then detects and removes spurious/extra lampOn events (offset from cue <=0 or >17.05s) until the count matches the number of cue events.
+            % Unless SkipBlockIDs is set, calls blockDurationParser to derive per-block reward start/end times (obj.GLM.rewardStart_wrtc_s / rewardEnd_wrtc_s) and computes total trial length and ITI per block (obj.GLM.totalTrial_s, obj.GLM.ITI_wrtc_s) from the minimum lampOn-to-next-lampOff gap in each block.
+            % Returns the figure handle ff containing the diagnostic plots.
+            % [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
             if nargin < 3, SkipBlockIDs=false;end
             if nargin < 2, Overwrite=false;end
     		% 
@@ -26368,6 +26713,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 			cd(retdir)
 		end
 		function alignFluopulse(obj)
+			% Appears to be an incomplete/deprecated method: apart from a stray non-executable line ('sObj_to_fObj') and a warning comment, the entire body is commented out, so calling it currently does nothing.
+			% The commented-out code documents (at least) two abandoned approaches for aligning a separately-recorded 'fluopulse' signal (raw F, Tau, and dFF/gfit) to the CED (Spike2) timeline: one based on per-trial lampOff/cue index mapping, and a second based on matching rounded analog timestamps between the fluopulse recording and CED time, motivated by a comment that fluopulse timestamps are unreliable by up to ~100ms.
+			% If reactivated, the intended outputs would be obj.GLM.fluopulse.aligned.F, .Tau, and .gfit, filled in via fillmissing('linear') after mapping raw fluopulse samples onto the CED sample grid.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			sObj_to_fObj
             % warning('I think this is shifting fluopulse earlier than it should by 1 or two samples!!!!!! 10/25/25')
 			
@@ -26539,6 +26888,10 @@ classdef CLASS_photometry_roadmapv1_4 < handle
 
 		end
 		function f = fix_photometry_in_halfway_ex4(obj, kill_s_window, gfitog)
+			% Repairs a photometry trace with a corrupted middle segment -- detected as a >200s decrease between successive lampOff times, marking a gap between two recording blocks -- by splitting rawF into two halves around the gap, running normalizedMultiBaselineDFF independently on each half (excluding a kill_s_window-second window on either side of the gap), and stitching the two corrected dF/F segments back together into obj.GLM.gfit.
+			% Plots a before/after diagnostic figure: raw signal with lamp/lick event markers and the killed-index region highlighted, plus the original vs. corrected gfit overlay.
+			% Marks obj.GLM.HalwayExCorrected_dF_F = true when done.
+			% [AI-DOC] Documentation drafted by AI from source inspection; verify before relying on it.
 			if nargin < 3
 				gfitog = obj.GLM.gfit;
 			end
