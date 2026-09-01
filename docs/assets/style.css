@@ -100,15 +100,71 @@ main {
   font-size: 0.8rem;
 }
 
-.entry-description {
-  margin-top: 0.5rem;
-  white-space: pre-wrap;
+.entry-summary {
+  margin: 0.5rem 0 0;
   font-size: 0.92rem;
 }
 
-.entry-description.empty {
+.entry-summary + .entry-summary {
+  margin-top: 0.35rem;
+}
+
+.entry-summary.empty {
   color: var(--muted);
   font-style: italic;
+}
+
+.entry-section {
+  margin-top: 0.75rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+
+.entry-section h4 {
+  margin: 0 0 0.4rem;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--muted);
+}
+
+.entry-dl {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  column-gap: 0.9rem;
+  row-gap: 0.4rem;
+}
+
+.entry-dl dt {
+  font-family: "SF Mono", Consolas, Menlo, monospace;
+  font-size: 0.85rem;
+  color: var(--accent);
+  white-space: nowrap;
+}
+
+.entry-dl dd {
+  margin: 0;
+  font-size: 0.88rem;
+}
+
+.entry-notes {
+  margin: 0;
+  padding-left: 1.1rem;
+  font-size: 0.88rem;
+}
+
+.entry-notes li {
+  margin-bottom: 0.3rem;
+}
+
+.badge-ai {
+  font-size: 0.68rem;
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  border: 1px solid var(--muted);
+  color: var(--muted);
+  cursor: help;
 }
 
 footer {

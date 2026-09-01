@@ -78,6 +78,20 @@ Caveats:
   open with a blank `%` line, so `Description` alone is often empty — the generator
   combines both fields so the site doesn't undersell what's actually documented.
 
+### AI-generated docstrings
+
+Some previously undocumented/sparse methods and properties in
+`src/CLASS_photometry_roadmapv1_4.m` have had docstrings drafted by AI from reading the
+implementation (not by a human familiar with the original intent). Every comment line added
+this way ends with the tag `[AI-DOC]`. To find them, review them, or strip them back out:
+
+```
+grep -n "\[AI-DOC\]" src/CLASS_photometry_roadmapv1_4.m
+```
+
+Treat these as a best-effort starting point, not verified ground truth — cross-check against
+the actual code before relying on specifics (units, edge cases, parameter meanings).
+
 ## Notes (Abu 9/1/26)
 - Automated ways to collect different parts of data (CED, mbi, metadata txt file), but none to eollect across multiuple animals
 - Elias - shortphoto_analysis.m -> tdt correction of rdlight signal
